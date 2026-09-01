@@ -18,12 +18,14 @@ import { soundFx, triggerHaptic } from '../services/soundEffects';
 
 interface WaterTrackerCardProps {
   activity: DailyActivityLog;
+  selectedDate?: string;
   onWaterUpdated: (newAmountMl: number) => void;
   onLogWaterDelta?: (deltaMl: number) => void;
 }
 
 export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
   activity,
+  selectedDate,
   onWaterUpdated,
   onLogWaterDelta,
 }) => {
@@ -32,6 +34,14 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
   const [mode, setMode] = useState<'add' | 'subtract'>('add');
   const [showHistory, setShowHistory] = useState(false);
   const [todayLogs, setTodayLogs] = useState<WaterLog[]>([]);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = !selectedDate || selectedDate === todayStr;
+
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
 
   const currentMl = Math.max(0, activity.waterMl || 0);
   const goalMl = Math.max(1000, activity.waterGoalMl || 3000);
@@ -163,6 +173,12 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
               ({currentMl.toLocaleString()} / {goalMl.toLocaleString()} ml)
             </span>
           </div>
+
+          {currentMl === 0 && !isToday && (
+            <span className="text-xs text-amber-500 dark:text-amber-400 font-medium">
+              No hydration logged for this date
+            </span>
+          )}
 
           <div className="flex items-center gap-2">
             {todayLogs.length > 0 && (

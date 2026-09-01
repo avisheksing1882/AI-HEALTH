@@ -394,6 +394,7 @@ export function App() {
                 meals={meals}
                 workouts={workouts}
                 insights={insights}
+                selectedDate={selectedDate}
                 onOpenAIScanner={() => setIsAIScannerOpen(true)}
                 onOpenManualFoodLogger={() => setIsManualFoodOpen(true)}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}

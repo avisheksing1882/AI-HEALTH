@@ -8,6 +8,7 @@ import { FoodHealthWarningAccordion } from './FoodHealthWarningAccordion';
 interface MealsTimelineProps {
   meals: MealLog[];
   healthConditions?: HealthCondition[];
+  selectedDate?: string;
   onDeleteMeal: (id: string) => void;
   onOpenAIScanner: () => void;
   onOpenManualLogger: () => void;
@@ -23,11 +24,20 @@ const MEAL_SECTIONS: { type: MealType; label: string; icon: string; timeHint: st
 export const MealsTimeline: React.FC<MealsTimelineProps> = ({
   meals,
   healthConditions = [],
+  selectedDate,
   onDeleteMeal,
   onOpenAIScanner,
   onOpenManualLogger,
 }) => {
   const [expandedMealIds, setExpandedMealIds] = useState<Set<string>>(new Set());
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = !selectedDate || selectedDate === todayStr;
+
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
 
   const toggleExpand = (id: string) => {
     soundFx.playTap();
@@ -60,7 +70,9 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
               Food Diary & Meal Timeline
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {meals.length} meals logged today
+              {meals.length > 0 
+                ? `${meals.length} meals logged ${isToday ? 'today' : 'on ' + formatDateDisplay(selectedDate!)}`
+                : isToday ? 'No meals logged today yet' : `No meals logged on ${formatDateDisplay(selectedDate!)}`}
             </p>
           </div>
         </div>

@@ -18,17 +18,30 @@ import { soundFx, triggerHaptic } from '../services/soundEffects';
 interface StepTrackerCardProps {
   activity: DailyActivityLog;
   profile: UserProfile;
+  selectedDate?: string;
   onActivityUpdated: (updated: DailyActivityLog) => void;
 }
 
 export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
   activity,
   profile,
+  selectedDate,
   onActivityUpdated,
 }) => {
   const [gpsState, setGpsState] = useState<GpsTrackingState>(pedometer.getGpsState());
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = !selectedDate || selectedDate === todayStr;
+
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
   useEffect(() => {
+    // Only subscribe to live pedometer events when viewing today's activity
+    if (!isToday) return;
+
     const unsubscribe = pedometer.subscribe((newActivity, newGps) => {
       if (newActivity.date === activity.date) {
         onActivityUpdated({
@@ -48,9 +61,10 @@ export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
       }
     });
     return () => unsubscribe();
-  }, [activity.date, activity.waterMl, activity.restingCaloriesBurned, onActivityUpdated]);
+  }, [isToday, activity.date, activity.waterMl, activity.restingCaloriesBurned, onActivityUpdated]);
 
   const handleToggleGps = async () => {
+    if (!isToday) return;
     soundFx.playTap();
     triggerHaptic();
     pedometer.toggleGpsTracking();
@@ -72,27 +86,35 @@ export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
               GPS Movement & Step Pedometer
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Google Fit-grade geodesic distance & real biometric cadence
+              {isToday 
+                ? 'Google Fit-grade geodesic distance & real biometric cadence' 
+                : `Recorded movement metrics for ${formatDateDisplay(selectedDate!)}`}
             </p>
           </div>
         </div>
 
-        {/* GPS Live Status Indicator */}
-        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition ${
-          gpsState.isActive
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-pulse'
-            : 'bg-slate-100 dark:bg-obsidian-800 text-slate-500 border-slate-200 dark:border-slate-700'
-        }`}>
-          <Radio className="w-3.5 h-3.5" />
-          <span>{gpsState.isActive ? 'GPS Active' : 'GPS Idle'}</span>
-        </div>
+        {/* GPS Status Indicator */}
+        {isToday ? (
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition ${
+            gpsState.isActive
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-pulse'
+              : 'bg-slate-100 dark:bg-obsidian-800 text-slate-500 border-slate-200 dark:border-slate-700'
+          }`}>
+            <Radio className="w-3.5 h-3.5" />
+            <span>{gpsState.isActive ? 'GPS Active' : 'GPS Idle'}</span>
+          </div>
+        ) : (
+          <span className="text-[10px] uppercase font-bold text-slate-400 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800">
+            {activity.steps > 0 ? 'Archived Log' : 'No Activity'}
+          </span>
+        )}
       </div>
 
       {/* Main Metric Counter Banner */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-emerald-500/5 to-transparent border border-cyan-500/20">
         <div>
           <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block mb-0.5">
-            Total Steps Today
+            {isToday ? 'Total Steps Today' : `Total Steps on ${formatDateDisplay(selectedDate!)}`}
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -102,6 +124,11 @@ export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
               / {activity.stepGoal.toLocaleString()} goal
             </span>
           </div>
+          {activity.steps === 0 && !isToday && (
+            <span className="text-xs text-amber-500 dark:text-amber-400 font-medium block mt-1">
+              No step movement recorded on this date
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 dark:text-slate-300">

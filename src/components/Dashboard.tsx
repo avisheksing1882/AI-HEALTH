@@ -29,6 +29,7 @@ interface DashboardProps {
   meals: MealLog[];
   workouts: WorkoutLog[];
   insights: NutritionInsight[];
+  selectedDate?: string;
   onOpenAIScanner: () => void;
   onOpenManualFoodLogger: () => void;
   onOpenWorkoutModal: () => void;
@@ -45,6 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   meals,
   workouts,
   insights,
+  selectedDate,
   onOpenAIScanner,
   onOpenManualFoodLogger,
   onOpenWorkoutModal,
@@ -56,6 +58,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [weeklyWeightAnalysis, setWeeklyWeightAnalysis] = useState<WeeklyWeightAnalysis | null>(null);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = !selectedDate || selectedDate === todayStr;
+
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   useEffect(() => {
     async function loadWeightData() {
       const logs = await db.weightLogs.where('userId').equals(profile.id).sortBy('date');
@@ -65,19 +75,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
     loadWeightData();
   }, [profile.id, profile.weightKg, profile.targetWeightKg]);
 
+  const hasAnyActivity = activity.steps > 0 || activity.activeCaloriesBurned > 0 || (activity.waterMl || 0) > 0 || meals.length > 0;
+
   return (
     <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-2">
       {/* Top Welcome / Hero Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Good {getGreeting()}, {profile.name.split(' ')[0]}
+                {isToday 
+                  ? `Good ${getGreeting()}, ${profile.name.split(' ')[0]}` 
+                  : `Log Archive for ${formatDateDisplay(selectedDate!)}`}
               </h1>
-              <span className="text-xl">✨</span>
+              {isToday ? (
+                <span className="text-xl">✨</span>
+              ) : (
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-obsidian-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                  {hasAnyActivity ? 'Recorded Data' : 'No Activity Logged'}
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Your daily metabolic overview &bull; Goal: <strong className="text-emerald-500 font-semibold">{profile.fitnessGoal.replace('_', ' ')}</strong>
+              {isToday 
+                ? `Your daily metabolic overview • Goal: `
+                : `Past historical log • Goal: `}
+              <strong className="text-emerald-500 font-semibold">{profile.fitnessGoal.replace('_', ' ')}</strong>
             </p>
           </div>
 
@@ -177,7 +200,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="lg:col-span-4 bg-white dark:bg-obsidian-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
           <div className="w-full flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Activity Rings</span>
-            <span className="text-[10px] uppercase font-bold text-emerald-500">Live Progress</span>
+            <span className={`text-[10px] uppercase font-bold ${
+              isToday 
+                ? 'text-emerald-500' 
+                : hasAnyActivity ? 'text-cyan-500' : 'text-slate-400'
+            }`}>
+              {isToday ? 'Live Progress' : hasAnyActivity ? 'Daily Record' : 'No Activity'}
+            </span>
           </div>
 
           <ActivityRings
@@ -209,7 +238,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div id="section-meds" className="scroll-mt-28">
         <MedicationsCard
           profile={profile}
-          selectedDate={activity.date}
+          selectedDate={selectedDate || activity.date}
         />
       </div>
 
@@ -227,6 +256,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <StepTrackerCard
               activity={activity}
               profile={profile}
+              selectedDate={selectedDate}
               onActivityUpdated={onActivityUpdated}
             />
           </div>
@@ -234,6 +264,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div id="section-water" className="scroll-mt-28">
             <WaterTrackerCard
               activity={activity}
+              selectedDate={selectedDate}
               onWaterUpdated={onWaterUpdated}
               onLogWaterDelta={onLogWaterDelta}
             />
@@ -245,6 +276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <MealsTimeline
             meals={meals}
             healthConditions={profile.healthConditions}
+            selectedDate={selectedDate}
             onDeleteMeal={onDeleteMeal}
             onOpenAIScanner={onOpenAIScanner}
             onOpenManualLogger={onOpenManualFoodLogger}

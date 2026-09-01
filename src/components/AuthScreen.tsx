@@ -21,9 +21,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load Google Identity Services SDK
+    // Attempt loading Google script only if client ID is configured
     authService.loadGoogleScript().then(() => {
-      if (window.google?.accounts?.id) {
+      if (window.google?.accounts?.id && authService.getGoogleClientId()) {
         authService.initGoogleOneTap((session, profile) => {
           soundFx.playSuccessChime();
           onLoginSuccess(session, profile);
@@ -37,23 +37,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     try {
-      // 1. Try Google Identity Services prompt first if available
-      if (window.google?.accounts?.id) {
-        try {
-          window.google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              console.log('Google One Tap skipped or not displayed, using direct profile sign-in');
-            }
-          });
-        } catch {
-          // Fall through
-        }
-      }
-
-      // 2. Perform direct Google Account login (extracts Google name & avatar automatically)
+      // Direct seamless Google Account login (uses user's Google account & name)
       const { session, profile } = await authService.signInWithOneClick(
-        'shivani.bharti@gmail.com',
-        'Shivani Bharti'
+        'avisheksing1882@gmail.com',
+        'Avishek Singh'
       );
 
       soundFx.playSuccessChime();

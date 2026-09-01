@@ -88,8 +88,8 @@ class AuthService {
     return this.currentSession;
   }
 
-  public getGoogleClientId(): string {
-    return localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY) || DEFAULT_CLIENT_ID;
+  public getGoogleClientId(): string | null {
+    return localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY) || (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || null;
   }
 
   public setGoogleClientId(clientId: string): void {
@@ -115,7 +115,6 @@ class AuthService {
         resolve();
       };
       script.onerror = () => {
-        console.warn('Google Identity Services script failed to load (offline or blocked). Fallback auth will be used.');
         resolve();
       };
       document.head.appendChild(script);
@@ -123,7 +122,7 @@ class AuthService {
   }
 
   /**
-   * Initializes Google One Tap and renders button if container is provided
+   * Initializes Google One Tap only if a valid Google Client ID is configured
    */
   public initGoogleOneTap(
     onSuccess: (session: AuthSession, profile: UserProfile) => void,
@@ -132,41 +131,42 @@ class AuthService {
     if (!window.google?.accounts?.id) return;
 
     const clientId = this.getGoogleClientId();
+    // Do not attempt to initialize GIS with invalid placeholder to prevent Google 401 popup
+    if (!clientId) return;
 
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: async (response) => {
-        if (response.credential) {
-          const payload = decodeJwt(response.credential);
-          if (payload) {
-            const { session, profile } = await this.processGoogleLogin({
-              email: payload.email,
-              name: payload.name,
-              avatarUrl: payload.picture,
-              googleId: payload.sub,
-              token: response.credential,
-              method: 'google_gis'
-            });
-            onSuccess(session, profile);
-          }
-        }
-      },
-      auto_select: false,
-      cancel_on_tap_outside: true
-    });
-
-    if (buttonContainer) {
-      window.google.accounts.id.renderButton(buttonContainer, {
-        theme: 'filled_black',
-        size: 'large',
-        text: 'continue_with',
-        shape: 'pill',
-        width: 280
-      });
-    }
-
-    // Attempt One-Tap prompt
     try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response) => {
+          if (response.credential) {
+            const payload = decodeJwt(response.credential);
+            if (payload) {
+              const { session, profile } = await this.processGoogleLogin({
+                email: payload.email,
+                name: payload.name,
+                avatarUrl: payload.picture,
+                googleId: payload.sub,
+                token: response.credential,
+                method: 'google_gis'
+              });
+              onSuccess(session, profile);
+            }
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      if (buttonContainer) {
+        window.google.accounts.id.renderButton(buttonContainer, {
+          theme: 'filled_black',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'pill',
+          width: 280
+        });
+      }
+
       window.google.accounts.id.prompt();
     } catch {
       // Ignored

@@ -70,30 +70,76 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     }
   }, [isOpen]);
 
-  const startCamera = async () => {
+  const [isFrontCamera, setIsFrontCamera] = useState(false);
+
+  // Attach video stream whenever videoRef and streamRef are ready
+  useEffect(() => {
+    if (isCameraActive && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(err => console.warn('Error starting video stream:', err));
+    }
+  }, [isCameraActive]);
+
+  const startCamera = async (front: boolean = false) => {
     try {
       setErrorMessage(null);
+      setAnalysisResult(null);
+      setPresetId(null);
       setMode('camera');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
+
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+
+      let stream: MediaStream;
+      const desiredFacing = front ? 'user' : 'environment';
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: desiredFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch {
+        // Fallback to any available camera (laptop webcam, front camera)
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
       streamRef.current = stream;
+      setIsCameraActive(true);
+
+      // Also directly assign if ref is already mounted
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch(() => {});
       }
-      setIsCameraActive(true);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Camera access error:', err);
-      setErrorMessage('Could not access camera. You can upload an image or select a sample dish.');
+      const isDenied = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError';
+      setErrorMessage(
+        isDenied
+          ? 'Camera permission denied. Please allow camera permissions in your browser URL bar.'
+          : 'Could not access camera hardware. You can upload a photo or select a sample dish.'
+      );
       setMode('presets');
+      setIsCameraActive(false);
     }
+  };
+
+  const toggleCameraFacing = async () => {
+    soundFx.playTap();
+    const nextFacing = !isFrontCamera;
+    setIsFrontCamera(nextFacing);
+    await startCamera(nextFacing);
   };
 
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
   };
@@ -390,23 +436,40 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
           {/* Camera Viewfinder Screen */}
           {mode === 'camera' && isCameraActive && (
             <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-slate-800 shadow-inner">
-              <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
+              <video 
+                ref={videoRef} 
+                playsInline 
+                autoPlay 
+                muted 
+                className="w-full h-full object-cover" 
+              />
               
               {/* Viewfinder Target Reticle */}
-              <div className="absolute inset-8 border-2 border-dashed border-emerald-400/60 rounded-2xl pointer-events-none flex items-center justify-center">
-                <span className="text-[11px] font-semibold text-emerald-400 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm">
+              <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-emerald-400/60 rounded-2xl pointer-events-none flex items-center justify-center">
+                <span className="text-[11px] font-semibold text-emerald-400 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-md">
                   Align plate inside frame
                 </span>
+              </div>
+
+              {/* Top Controls Overlay */}
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  onClick={toggleCameraFacing}
+                  className="p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition shadow-lg"
+                  title="Switch Camera (Front/Rear)"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Shutter Capture Button */}
               <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
                 <button
                   onClick={capturePhotoFromCamera}
-                  className="w-16 h-16 rounded-full bg-white p-1 shadow-xl hover:scale-105 active:scale-95 transition flex items-center justify-center border-4 border-emerald-500"
+                  className="w-16 h-16 rounded-full bg-white p-1 shadow-2xl hover:scale-105 active:scale-95 transition flex items-center justify-center border-4 border-emerald-500"
                   title="Capture Photo"
                 >
-                  <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-inner">
                     <Camera className="w-6 h-6" />
                   </div>
                 </button>

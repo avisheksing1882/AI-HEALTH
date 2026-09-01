@@ -138,52 +138,83 @@ class AuthService {
   }
 
   /**
-   * Initializes Google One Tap only if a valid Google Client ID is configured
+   * Performs standard Google OAuth 2.0 Popup Flow and fetches verified Google userinfo
    */
-  public initGoogleOneTap(
-    onSuccess: (session: AuthSession, profile: UserProfile) => void,
-    buttonContainer?: HTMLElement | null
-  ): void {
-    const clientId = this.getGoogleClientId();
-    if (!clientId || !window.google?.accounts?.id) return;
+  public async loginWithGoogleOAuthPopup(customClientId?: string): Promise<{ session: AuthSession; profile: UserProfile } | null> {
+    const clientId = customClientId || this.getGoogleClientId();
+    if (!clientId) {
+      throw new Error('MISSING_CLIENT_ID');
+    }
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response) => {
-          if (response.credential) {
-            const payload = decodeJwt(response.credential);
-            if (payload) {
-              const { session, profile } = await this.processGoogleLogin({
-                email: payload.email,
-                name: payload.name,
-                avatarUrl: payload.picture,
-                googleId: payload.sub,
-                token: response.credential,
-                method: 'google_gis'
-              });
-              onSuccess(session, profile);
+    const redirectUri = window.location.origin;
+    const scope = encodeURIComponent('openid email profile');
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&prompt=select_account`;
+
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      authUrl,
+      'GoogleSignIn',
+      `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+    );
+
+    if (!popup) {
+      throw new Error('POPUP_BLOCKED');
+    }
+
+    return new Promise((resolve, reject) => {
+      const checkInterval = setInterval(async () => {
+        try {
+          if (!popup || popup.closed) {
+            clearInterval(checkInterval);
+            resolve(null);
+            return;
+          }
+
+          if (popup.location.href.includes(redirectUri)) {
+            const hash = popup.location.hash;
+            if (hash.includes('access_token=')) {
+              clearInterval(checkInterval);
+              popup.close();
+
+              const params = new URLSearchParams(hash.substring(1));
+              const accessToken = params.get('access_token');
+
+              if (accessToken) {
+                // Fetch verified profile directly from Google
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                const googleUser = await res.json();
+
+                if (googleUser && googleUser.email) {
+                  const result = await this.processGoogleLogin({
+                    email: googleUser.email,
+                    name: googleUser.name || googleUser.given_name || googleUser.email.split('@')[0],
+                    avatarUrl: googleUser.picture,
+                    googleId: googleUser.sub,
+                    token: accessToken,
+                    method: 'google_gis'
+                  });
+                  resolve(result);
+                  return;
+                }
+              }
             }
           }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
+        } catch {
+          // Cross-origin restriction while on accounts.google.com - expected until redirect
+        }
+      }, 500);
 
-      if (buttonContainer) {
-        window.google.accounts.id.renderButton(buttonContainer, {
-          theme: 'filled_black',
-          size: 'large',
-          text: 'continue_with',
-          shape: 'pill',
-          width: 280
-        });
-      }
-
-      window.google.accounts.id.prompt();
-    } catch {
-      // Ignored
-    }
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(null);
+      }, 120000);
+    });
   }
 
   /**

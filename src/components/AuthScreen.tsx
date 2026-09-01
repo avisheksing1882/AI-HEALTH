@@ -19,6 +19,15 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const googleBtnContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    // Initialize official Google Identity Services SDK
+    authService.initGoogleIdentityServices((session, profile) => {
+      soundFx.playSuccessChime();
+      onLoginSuccess(session, profile);
+    }, googleBtnContainerRef.current);
+  }, [onLoginSuccess]);
 
   const handleOneTapGoogleLogin = async () => {
     soundFx.playTap();
@@ -146,6 +155,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
           {/* Direct 1-Tap Google Login Button */}
           <div className="space-y-4">
+            {/* Google Identity Services Rendered Button Container (auto-populates when client ID is active) */}
+            <div ref={googleBtnContainerRef} className="flex justify-center empty:hidden" />
+
             <button
               type="button"
               onClick={handleOneTapGoogleLogin}

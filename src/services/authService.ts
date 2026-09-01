@@ -101,40 +101,57 @@ class AuthService {
     }
   }
 
-  public setGoogleClientId(clientId: string): void {
-    if (!clientId || clientId.includes('vitaltrack-health')) {
-      localStorage.removeItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
-    } else {
-      localStorage.setItem(GOOGLE_CLIENT_ID_STORAGE_KEY, clientId.trim());
-    }
-  }
-
   /**
-   * Loads the Google Identity Services SDK script dynamically only if valid client ID exists
+   * Initializes official Google Identity Services according to developers.google.com guidelines
    */
-  public async loadGoogleScript(): Promise<void> {
+  public initGoogleIdentityServices(
+    onSuccess: (session: AuthSession, profile: UserProfile) => void,
+    buttonContainer?: HTMLElement | null
+  ): void {
     const clientId = this.getGoogleClientId();
-    if (!clientId) return;
+    if (!clientId || !window.google?.accounts?.id) return;
 
-    if (this.gisLoaded || window.google?.accounts?.id) {
-      this.gisLoaded = true;
-      return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: { credential: string }) => {
+          if (response?.credential) {
+            const payload = decodeJwt(response.credential);
+            if (payload && payload.email) {
+              const { session, profile } = await this.processGoogleLogin({
+                email: payload.email,
+                name: payload.name || payload.given_name || payload.email.split('@')[0],
+                avatarUrl: payload.picture,
+                googleId: payload.sub,
+                token: response.credential,
+                method: 'google_gis'
+              });
+              onSuccess(session, profile);
+            }
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      if (buttonContainer) {
+        buttonContainer.innerHTML = '';
+        window.google.accounts.id.renderButton(buttonContainer, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+          shape: 'pill',
+          text: 'signin_with',
+          logo_alignment: 'left',
+          width: 320
+        });
+      }
+
+      // Display official Google One Tap prompt
+      window.google.accounts.id.prompt();
+    } catch (err) {
+      console.warn('[Google GIS] Initialization warning:', err);
     }
-
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        this.gisLoaded = true;
-        resolve();
-      };
-      script.onerror = () => {
-        resolve();
-      };
-      document.head.appendChild(script);
-    });
   }
 
   /**

@@ -610,6 +610,52 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
           {analysisResult && !isScanning && (
             <div className="space-y-4">
               
+              {/* One-Tap Quick Food / Fruit Identifier Chips */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Quick Confirm / Switch Food Item:
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+                  {[
+                    { name: 'Fresh Red Apple', emoji: '🍎', portionGrams: 150, calories: 95, protein: 0.5, carbs: 25.0, fat: 0.3, fiber: 4.4, category: 'fruit' },
+                    { name: 'Fresh Banana', emoji: '🍌', portionGrams: 120, calories: 105, protein: 1.3, carbs: 27.0, fat: 0.4, fiber: 3.1, category: 'fruit' },
+                    { name: 'Fresh Orange', emoji: '🍊', portionGrams: 130, calories: 62, protein: 1.2, carbs: 15.4, fat: 0.2, fiber: 3.1, category: 'fruit' },
+                    { name: 'Garden Green Salad', emoji: '🥗', portionGrams: 150, calories: 35, protein: 2.0, carbs: 6.0, fat: 0.5, fiber: 2.8, category: 'vegetable' },
+                    { name: 'Black Coffee / Americano', emoji: '☕', portionGrams: 200, calories: 5, protein: 0.3, carbs: 0.6, fat: 0.1, fiber: 0, category: 'beverage' },
+                    { name: 'Whole Wheat Toast & Egg', emoji: '🥪', portionGrams: 140, calories: 280, protein: 13.0, carbs: 26.0, fat: 12.0, fiber: 3.5, category: 'mixed' },
+                    { name: 'Steamed Rice & Dal', emoji: '🍚', portionGrams: 250, calories: 320, protein: 11.0, carbs: 58.0, fat: 4.5, fiber: 6.2, category: 'grain' },
+                    { name: 'Boiled Eggs (2 pcs)', emoji: '🥚', portionGrams: 100, calories: 143, protein: 12.6, carbs: 0.8, fat: 9.5, fiber: 0, category: 'protein' },
+                    { name: 'Grilled Chicken Breast', emoji: '🍗', portionGrams: 150, calories: 247, protein: 46.5, carbs: 0, fat: 5.4, fiber: 0, category: 'protein' }
+                  ].map((f) => (
+                    <button
+                      key={f.name}
+                      onClick={() => {
+                        soundFx.playTap();
+                        const item: FoodItemNutrition = {
+                          id: `quick-${Date.now()}`,
+                          name: f.name,
+                          portionGrams: f.portionGrams,
+                          portionDescription: `${f.portionGrams}g`,
+                          calories: f.calories,
+                          protein: f.protein,
+                          carbs: f.carbs,
+                          fat: f.fat,
+                          fiber: f.fiber,
+                          category: f.category as any,
+                          plateLocation: 'Center',
+                          confidence: 0.98
+                        };
+                        recalculateAndSetAnalysis([item]);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-obsidian-950 hover:bg-emerald-500/10 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0 flex items-center gap-1 transition active:scale-95"
+                    >
+                      <span>{f.emoji}</span>
+                      <span>{f.name.split(' ')[1] || f.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Image & Main Summary Header */}
               <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-obsidian-950/80 border border-slate-200 dark:border-slate-800">
                 {selectedImage && (

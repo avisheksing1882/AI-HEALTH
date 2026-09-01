@@ -36,8 +36,8 @@ declare global {
 const SESSION_STORAGE_KEY = 'vitaltrack_auth_session';
 const GOOGLE_CLIENT_ID_STORAGE_KEY = 'vitaltrack_google_client_id';
 
-// Default public Google Client ID placeholder (can be customized by user or env)
-const DEFAULT_CLIENT_ID = '1092823812839-vitaltrack-health.apps.googleusercontent.com';
+// Real Google OAuth 2.0 Client ID
+const DEFAULT_CLIENT_ID = '937597518742-a8vm1rj2ke716htn8jm9up0d0fuu4o3e.apps.googleusercontent.com';
 
 /**
  * Parses JWT token without external libraries
@@ -88,16 +88,17 @@ class AuthService {
     return this.currentSession;
   }
 
-  public getGoogleClientId(): string | null {
-    try {
-      const stored = localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
-      if (stored && (stored.includes('vitaltrack-health') || stored.length < 20)) {
-        localStorage.removeItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
-        return null;
-      }
-      return stored || (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || null;
-    } catch {
-      return null;
+  public getGoogleClientId(): string {
+    return (
+      localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY) ||
+      (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+      DEFAULT_CLIENT_ID
+    );
+  }
+
+  public setGoogleClientId(clientId: string): void {
+    if (clientId && clientId.trim()) {
+      localStorage.setItem(GOOGLE_CLIENT_ID_STORAGE_KEY, clientId.trim());
     }
   }
 
@@ -109,7 +110,7 @@ class AuthService {
     buttonContainer?: HTMLElement | null
   ): void {
     const clientId = this.getGoogleClientId();
-    if (!clientId || !window.google?.accounts?.id) return;
+    if (!window.google?.accounts?.id) return;
 
     try {
       window.google.accounts.id.initialize({
@@ -143,7 +144,7 @@ class AuthService {
           shape: 'pill',
           text: 'signin_with',
           logo_alignment: 'left',
-          width: 320
+          width: 300
         });
       }
 
@@ -151,6 +152,19 @@ class AuthService {
       window.google.accounts.id.prompt();
     } catch (err) {
       console.warn('[Google GIS] Initialization warning:', err);
+    }
+  }
+
+  /**
+   * Triggers Google GIS prompt directly
+   */
+  public triggerGooglePrompt(): void {
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt();
+      } catch (e) {
+        console.warn('Prompt error:', e);
+      }
     }
   }
 

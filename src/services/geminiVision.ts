@@ -146,12 +146,11 @@ export async function analyzeFoodImageWithAI(
   // Downscale image base64 if needed for ultra-fast payload transfer
   const optimizedImage = await downscaleImageForVision(imageBase64OrUrl);
 
-  // Determine effective API key from arguments, localStorage, or environment
+  // Determine effective API key from arguments, localStorage, environment, or runtime token
   const effectiveKey = (apiKey && apiKey.trim().length > 10) 
     ? apiKey.trim() 
     : getStoredGeminiApiKey();
 
-  // 1. If Gemini API key is available, execute live Google Gemini Vision multimodal call
   if (effectiveKey) {
     try {
       const geminiResult = await callGeminiVisionApi(optimizedImage, effectiveKey);
@@ -164,8 +163,7 @@ export async function analyzeFoodImageWithAI(
     }
   }
 
-  // 2. If no Gemini API key is provided, throw helpful actionable error so user can connect their free key for direct AI recognition
-  throw new Error('🔑 Gemini API Key required for direct AI recognition. Please paste your free Gemini API key in the connection box above to analyze your photo with AI.');
+  throw new Error('🔑 Gemini API Key required for direct AI recognition. Please paste your Gemini API key in the connection box above.');
 }
 
 async function callGeminiVisionApi(imageInput: string, apiKey: string): Promise<VisionAnalysisResult> {
@@ -179,9 +177,6 @@ async function callGeminiVisionApi(imageInput: string, apiKey: string): Promise<
       base64Data = matches[2];
     }
   }
-
-  // Use Gemini 1.5 Flash endpoint
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
@@ -203,30 +198,51 @@ async function callGeminiVisionApi(imageInput: string, apiKey: string): Promise<
     }
   };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
+  const modelsToTry = [
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-flash-latest'
+  ];
 
-  if (!response.ok) {
-    const errText = await response.text();
-    let msg = `Status ${response.status}`;
+  let lastErrorMsg = '';
+
+  for (const model of modelsToTry) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     try {
-      const errJson = JSON.parse(errText);
-      msg = errJson.error?.message || errText;
-    } catch {
-      msg = errText;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        try {
+          const errJson = JSON.parse(errText);
+          lastErrorMsg = errJson.error?.message || errText;
+        } catch {
+          lastErrorMsg = errText;
+        }
+        continue;
+      }
+
+      const data = await response.json();
+      const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!textContent) {
+        continue;
+      }
+
+      return parseGeminiResponse(textContent, imageInput);
+    } catch (err: any) {
+      lastErrorMsg = err?.message || 'Network fetch failure';
     }
-    throw new Error(msg);
   }
 
-  const data = await response.json();
-  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!textContent) {
-    throw new Error('No recognition response content from Gemini Vision');
-  }
+  throw new Error(lastErrorMsg || 'All Gemini AI vision models were unreachable');
+}
 
+function parseGeminiResponse(textContent: string, imageInput: string): VisionAnalysisResult {
   const parsed = JSON.parse(textContent);
 
   const items: FoodItemNutrition[] = (parsed.items || []).map((item: Partial<FoodItemNutrition>, idx: number) => ({

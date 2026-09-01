@@ -74,28 +74,28 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-obsidian-950/80 border-b border-slate-200 dark:border-slate-800/80 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/90 dark:bg-obsidian-950/90 border-b border-slate-200 dark:border-slate-800/80 transition-colors w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        
+        {/* Main Navbar Row */}
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
           
           {/* App Brand */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onTabChange('dashboard')}>
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-0.5 shadow-lg shadow-emerald-500/20 flex items-center justify-center">
-              <div className="w-full h-full bg-white dark:bg-obsidian-950 rounded-[14px] flex items-center justify-center">
-                <Activity className="w-5 h-5 text-emerald-500 dark:text-emerald-400 animate-pulse-subtle" />
+          <div 
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" 
+            onClick={() => onTabChange('dashboard')}
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-0.5 shadow-md shadow-emerald-500/20 flex items-center justify-center">
+              <div className="w-full h-full bg-white dark:bg-obsidian-950 rounded-[10px] sm:rounded-[14px] flex items-center justify-center">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 dark:text-emerald-400 animate-pulse-subtle" />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-emerald-600 to-cyan-600 dark:from-white dark:via-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent">
-                  VitalTrack AI
-                </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  AI
-                </span>
-              </div>
-              <span className="hidden sm:block text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
-                {profile.email}
+            <div className="flex items-center gap-1">
+              <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-emerald-600 to-cyan-600 dark:from-white dark:via-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                VitalTrack
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                AI
               </span>
             </div>
           </div>
@@ -144,8 +144,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Date Selector Pill */}
-          <div className="flex items-center bg-slate-100 dark:bg-obsidian-900/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800">
+          {/* Desktop Date Selector Pill */}
+          <div className="hidden md:flex items-center bg-slate-100 dark:bg-obsidian-900/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800">
             <button
               onClick={handlePrevDay}
               className="p-1 rounded-lg hover:bg-white dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
@@ -174,19 +174,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Right Action Icons (Streak, Notifications, Dark Mode, Profile, SignOut) */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right Action Icons */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             
             {/* Streak Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-500/10 dark:bg-orange-950/40 border border-orange-500/20 text-orange-500 font-bold text-xs shadow-sm">
-              <Flame className="w-4 h-4 fill-orange-500 animate-bounce" style={{ animationDuration: '2s' }} />
-              <span>{streakCount} {streakCount === 1 ? 'day' : 'days'}</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-orange-500/10 dark:bg-orange-950/40 border border-orange-500/20 text-orange-500 font-bold text-xs shadow-sm">
+              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-orange-500" />
+              <span>{streakCount}d</span>
             </div>
 
             {/* Notification Bell */}
             <button
               onClick={() => { soundFx.playTap(); onOpenNotifications(); }}
-              className="relative p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
+              className="relative p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
@@ -200,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Theme Toggle */}
             <button
               onClick={() => { soundFx.playTap(); onToggleTheme(); }}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
               title="Toggle Theme"
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Settings / Profile */}
             <button
               onClick={() => { soundFx.playTap(); onOpenSettings(); }}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition flex items-center gap-1.5"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition flex items-center gap-1.5"
               title="Profile & Settings"
             >
               {profile.avatarUrl ? (
@@ -219,18 +219,51 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Sign Out Button */}
+            {/* Sign Out Button (Desktop) */}
             <button
               onClick={() => { soundFx.playTap(); onLogout(); }}
-              className="hidden sm:flex items-center gap-1 p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition text-xs font-semibold"
+              className="hidden lg:flex items-center gap-1 p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition text-xs font-semibold"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden lg:inline">Sign Out</span>
+              <span>Sign Out</span>
             </button>
           </div>
 
         </div>
+
+        {/* Mobile Sub-Row Date Selector Bar */}
+        <div className="md:hidden pb-2.5 pt-0.5 flex items-center justify-center">
+          <div className="flex items-center justify-between w-full max-w-sm bg-slate-100/90 dark:bg-obsidian-900/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800 shadow-inner">
+            <button
+              onClick={handlePrevDay}
+              className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400 transition"
+              title="Previous Day"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div 
+              onClick={() => onTabChange('calendar')}
+              className="px-3 py-0.5 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-emerald-500 transition"
+            >
+              <CalendarIcon className="w-3.5 h-3.5 text-emerald-500" />
+              <span>{formatDateDisplay(selectedDate)}</span>
+            </div>
+            <button
+              onClick={handleNextDay}
+              disabled={isToday}
+              className={`p-1.5 rounded-lg transition ${
+                isToday 
+                  ? 'opacity-30 cursor-not-allowed text-slate-400' 
+                  : 'hover:bg-white dark:hover:bg-obsidian-800 text-slate-600 dark:text-slate-400'
+              }`}
+              title="Next Day"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
       </div>
     </header>
   );

@@ -342,7 +342,7 @@ export function App() {
 
   // 3. Authenticated State: Show Full Private Health Dashboard
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-obsidian-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors pb-20 md:pb-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-obsidian-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors pb-24 md:pb-8 w-full max-w-full overflow-x-hidden">
       
       {/* Top Navbar */}
       <Navbar
@@ -361,7 +361,7 @@ export function App() {
       />
 
       {/* Main Container View */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full max-w-full overflow-x-hidden">
         {activity && (
           <>
             {activeTab === 'dashboard' && (

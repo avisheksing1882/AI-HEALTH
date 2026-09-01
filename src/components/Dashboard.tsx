@@ -68,24 +68,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [profile.id, profile.weightKg, profile.targetWeightKg]);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      
+    <div>
       {/* Mobile Web Quick Section Jump Pill Bar */}
       <DashboardSectionNav />
 
-      {/* Top Welcome / Hero Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Good {getGreeting()}, {profile.name.split(' ')[0]}
-            </h1>
-            <span className="text-xl">✨</span>
+      <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-2">
+        {/* Top Welcome / Hero Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                Good {getGreeting()}, {profile.name.split(' ')[0]}
+              </h1>
+              <span className="text-xl">✨</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Your daily metabolic overview &bull; Goal: <strong className="text-emerald-500 font-semibold">{profile.fitnessGoal.replace('_', ' ')}</strong>
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Your daily metabolic overview &bull; Goal: <strong className="text-emerald-500 font-semibold">{profile.fitnessGoal.replace('_', ' ')}</strong>
-          </p>
-        </div>
 
         {/* Quick Log Action Bar */}
         <div className="flex items-center gap-2">
@@ -247,10 +247,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             onOpenManualLogger={onOpenManualFoodLogger}
           />
         </div>
-
       </div>
 
     </div>
+  </div>
   );
 };
 

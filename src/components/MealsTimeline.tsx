@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers } from 'lucide-react';
-import { MealLog, MealType } from '../types';
+import { MealLog, MealType, HealthCondition } from '../types';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { evaluateFoodForHealthConditions } from '../services/healthConditionFoodEvaluator';
+import { FoodHealthWarningAccordion } from './FoodHealthWarningAccordion';
 
 interface MealsTimelineProps {
   meals: MealLog[];
+  healthConditions?: HealthCondition[];
   onDeleteMeal: (id: string) => void;
   onOpenAIScanner: () => void;
   onOpenManualLogger: () => void;
@@ -19,6 +22,7 @@ const MEAL_SECTIONS: { type: MealType; label: string; icon: string; timeHint: st
 
 export const MealsTimeline: React.FC<MealsTimelineProps> = ({
   meals,
+  healthConditions = [],
   onDeleteMeal,
   onOpenAIScanner,
   onOpenManualLogger,
@@ -113,33 +117,53 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
 
               {/* Meals in this section */}
               {sectionMeals.length > 0 && (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2.5 pt-1">
                   {sectionMeals.map(meal => {
                     const isExpanded = expandedMealIds.has(meal.id);
+                    
+                    // Evaluate entire meal & individual items against active conditions
+                    const mealEval = evaluateFoodForHealthConditions({
+                      name: meal.title,
+                      calories: meal.totalCalories,
+                      carbs: meal.totalCarbs,
+                      sugar: meal.totalSugar,
+                      sodium: meal.totalSodium,
+                      fat: meal.totalFat,
+                      protein: meal.totalProtein
+                    }, healthConditions);
+
+                    // Border styling based on health severity
+                    const cardBorder = mealEval.highestSeverity === 'severe_red'
+                      ? 'border-rose-500/40 bg-rose-500/[0.02]'
+                      : mealEval.highestSeverity === 'warning_orange'
+                      ? 'border-amber-500/40 bg-amber-500/[0.02]'
+                      : mealEval.highestSeverity === 'caution_yellow'
+                      ? 'border-yellow-500/40'
+                      : 'border-slate-200 dark:border-slate-800/80';
 
                     return (
                       <div
                         key={meal.id}
                         onClick={() => toggleExpand(meal.id)}
-                        className="bg-white dark:bg-obsidian-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800/80 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition"
+                        className={`bg-white dark:bg-obsidian-900 rounded-2xl p-3.5 border ${cardBorder} cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition shadow-sm`}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             {meal.photoUri ? (
                               <img
                                 src={meal.photoUri}
                                 alt={meal.title}
-                                className="w-12 h-12 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                                className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm"
                               />
                             ) : (
-                              <div className="w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
                                 <Utensils className="w-5 h-5" />
                               </div>
                             )}
 
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                                   {meal.title}
                                 </span>
                                 {meal.aiAnalyzed && (
@@ -148,7 +172,7 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                              <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 flex-wrap">
                                 <span>{meal.time}</span>
                                 <span>&bull;</span>
                                 <span>P: {meal.totalProtein}g</span>
@@ -159,7 +183,7 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-extrabold text-slate-900 dark:text-white">
                               {meal.totalCalories} <span className="text-[10px] font-normal text-slate-400">kcal</span>
                             </span>
@@ -180,31 +204,68 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                           </div>
                         </div>
 
+                        {/* Health Condition Warnings Accordion */}
+                        {mealEval.hasWarnings && (
+                          <FoodHealthWarningAccordion
+                            warnings={mealEval.warnings}
+                            highestSeverity={mealEval.highestSeverity}
+                          />
+                        )}
+
                         {/* Expanded Item Breakdown */}
                         {isExpanded && meal.items && meal.items.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
+                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                              Decomposed Ingredients:
+                              Decomposed Ingredients ({meal.items.length}):
                             </span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                              {meal.items.map((item, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-obsidian-950 text-[11px]"
-                                >
-                                  <div>
-                                    <span className="font-semibold text-slate-700 dark:text-slate-200 block">
-                                      {item.name}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {meal.items.map((item, idx) => {
+                                const itemEval = evaluateFoodForHealthConditions({
+                                  name: item.name,
+                                  calories: item.calories,
+                                  carbs: item.carbs,
+                                  sugar: item.sugar,
+                                  sodium: item.sodium,
+                                  fat: item.fat,
+                                  protein: item.protein
+                                }, healthConditions);
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`p-2.5 rounded-xl text-[11px] border space-y-1 ${
+                                      itemEval.highestSeverity === 'severe_red'
+                                        ? 'bg-rose-500/5 border-rose-500/30'
+                                        : itemEval.highestSeverity === 'warning_orange'
+                                        ? 'bg-amber-500/5 border-amber-500/30'
+                                        : itemEval.highestSeverity === 'caution_yellow'
+                                        ? 'bg-yellow-500/5 border-yellow-500/30'
+                                        : 'bg-slate-50 dark:bg-obsidian-950 border-slate-200/60 dark:border-slate-800/60'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">
+                                        {item.name}
+                                      </span>
+                                      <span className="font-black text-slate-900 dark:text-white shrink-0 ml-1">
+                                        {item.calories} kcal
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 block">
                                       {item.portionDescription} &bull; P:{item.protein}g C:{item.carbs}g F:{item.fat}g
                                     </span>
+
+                                    {/* Ingredient-specific Warning Accordion */}
+                                    {itemEval.hasWarnings && (
+                                      <FoodHealthWarningAccordion
+                                        warnings={itemEval.warnings}
+                                        highestSeverity={itemEval.highestSeverity}
+                                        compact
+                                      />
+                                    )}
                                   </div>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                                    {item.calories} kcal
-                                  </span>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}

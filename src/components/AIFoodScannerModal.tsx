@@ -27,6 +27,8 @@ import {
 } from '../services/geminiVision';
 import { PRESET_SAMPLE_MEALS, FOOD_DATABASE, convertEntryToNutritionItem, lookupFoodByQuery } from '../services/foodCatalog';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { evaluateFoodForHealthConditions } from '../services/healthConditionFoodEvaluator';
+import { FoodHealthWarningAccordion } from './FoodHealthWarningAccordion';
 
 interface AIFoodScannerModalProps {
   isOpen: boolean;
@@ -744,6 +746,28 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 </div>
               </div>
 
+              {/* Overall Plate Health Condition Warning Accordion */}
+              {(() => {
+                const plateEval = evaluateFoodForHealthConditions({
+                  name: analysisResult.title,
+                  calories: analysisResult.totalCalories,
+                  carbs: analysisResult.totalCarbs,
+                  sugar: analysisResult.totalSugar,
+                  sodium: analysisResult.totalSodium,
+                  fat: analysisResult.totalFat,
+                  protein: analysisResult.totalProtein
+                }, profile.healthConditions || []);
+
+                if (!plateEval.hasWarnings) return null;
+
+                return (
+                  <FoodHealthWarningAccordion
+                    warnings={plateEval.warnings}
+                    highestSeverity={plateEval.highestSeverity}
+                  />
+                );
+              })()}
+
               {/* Decomposed Items List & Verification */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -793,57 +817,93 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 )}
 
                 <div className="space-y-2">
-                  {analysisResult.items.map((item, index) => (
-                    <div
-                      key={item.id || index}
-                      className="bg-white dark:bg-obsidian-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 transition"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                          <div className="flex-1">
-                            <input
-                              type="text"
-                              value={item.name}
-                              onChange={(e) => handleUpdateItemName(index, e.target.value)}
-                              className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent hover:border-slate-400 focus:border-emerald-500 focus:outline-none w-full"
-                            />
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                              <span>{item.portionGrams}g</span>
-                              <span>&bull;</span>
-                              <span>P: {item.protein}g</span>
-                              <span>C: {item.carbs}g</span>
-                              <span>F: {item.fat}g</span>
-                              {item.fiber ? <span>&bull; Fib: {item.fiber}g</span> : null}
+                  {analysisResult.items.map((item, index) => {
+                    const itemEval = evaluateFoodForHealthConditions({
+                      name: item.name,
+                      calories: item.calories,
+                      carbs: item.carbs,
+                      sugar: item.sugar,
+                      sodium: item.sodium,
+                      fat: item.fat,
+                      protein: item.protein
+                    }, profile.healthConditions || []);
+
+                    const cardBorder = itemEval.highestSeverity === 'severe_red'
+                      ? 'border-rose-500/40 bg-rose-500/[0.02]'
+                      : itemEval.highestSeverity === 'warning_orange'
+                      ? 'border-amber-500/40 bg-amber-500/[0.02]'
+                      : itemEval.highestSeverity === 'caution_yellow'
+                      ? 'border-yellow-500/40'
+                      : 'border-slate-200 dark:border-slate-800/80';
+
+                    return (
+                      <div
+                        key={item.id || index}
+                        className={`bg-white dark:bg-obsidian-950 p-3.5 rounded-2xl border ${cardBorder} hover:border-slate-300 dark:hover:border-slate-700 transition`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                              itemEval.highestSeverity === 'severe_red'
+                                ? 'bg-rose-500'
+                                : itemEval.highestSeverity === 'warning_orange'
+                                ? 'bg-amber-500'
+                                : itemEval.highestSeverity === 'caution_yellow'
+                                ? 'bg-yellow-500'
+                                : 'bg-emerald-500'
+                            }`} />
+                            <div className="flex-1">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => handleUpdateItemName(index, e.target.value)}
+                                className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent hover:border-slate-400 focus:border-emerald-500 focus:outline-none w-full"
+                              />
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                <span>{item.portionGrams}g</span>
+                                <span>&bull;</span>
+                                <span>P: {item.protein}g</span>
+                                <span>C: {item.carbs}g</span>
+                                <span>F: {item.fat}g</span>
+                                {item.fiber ? <span>&bull; Fib: {item.fiber}g</span> : null}
+                              </div>
                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              {item.calories} <span className="text-[10px] font-normal text-slate-400">kcal</span>
+                            </span>
+                            
+                            <button
+                              onClick={() => {
+                                soundFx.playTap();
+                                setEditingItemIndex(editingItemIndex === index ? null : index);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-obsidian-800 transition"
+                              title="Adjust portion"
+                            >
+                              <Sliders className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteItem(index)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-slate-900 dark:text-white">
-                            {item.calories} <span className="text-[10px] font-normal text-slate-400">kcal</span>
-                          </span>
-                          
-                          <button
-                            onClick={() => {
-                              soundFx.playTap();
-                              setEditingItemIndex(editingItemIndex === index ? null : index);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-obsidian-800 transition"
-                            title="Adjust portion"
-                          >
-                            <Sliders className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteItem(index)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
-                            title="Remove item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                        {/* Health Condition Item Warning Accordion */}
+                        {itemEval.hasWarnings && (
+                          <FoodHealthWarningAccordion
+                            warnings={itemEval.warnings}
+                            highestSeverity={itemEval.highestSeverity}
+                            compact
+                          />
+                        )}
 
                       {/* Interactive Gram Portion Slider */}
                       {editingItemIndex === index && (
@@ -880,7 +940,8 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
 
               </div>

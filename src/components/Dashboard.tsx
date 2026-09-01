@@ -232,6 +232,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div id="section-meals" className="lg:col-span-7 scroll-mt-28">
           <MealsTimeline
             meals={meals}
+            healthConditions={profile.healthConditions}
             onDeleteMeal={onDeleteMeal}
             onOpenAIScanner={onOpenAIScanner}
             onOpenManualLogger={onOpenManualFoodLogger}

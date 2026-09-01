@@ -384,7 +384,7 @@ export function App() {
       />
 
       {/* Main Container View */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-0 sm:pt-4 pb-6 flex-1 w-full max-w-full overflow-x-hidden">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 flex-1 w-full max-w-full overflow-x-hidden">
         {activity && (
           <>
             {activeTab === 'dashboard' && (

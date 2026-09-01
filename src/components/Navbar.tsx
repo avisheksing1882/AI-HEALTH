@@ -237,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile Sub-Row Date Selector Bar */}
-          <div className="md:hidden pb-1.5 pt-0.5 flex items-center justify-center">
+          <div className="md:hidden pt-0.5 pb-1 flex items-center justify-center">
             <div className="flex items-center justify-between w-full max-w-sm bg-slate-100/90 dark:bg-obsidian-900/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800 shadow-inner">
               <button
                 onClick={handlePrevDay}
@@ -268,6 +268,38 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Mobile Sub-Row Section Navigation Pills (When on Dashboard) */}
+          {activeTab === 'dashboard' && (
+            <div className="md:hidden pb-2 pt-0.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { id: 'section-overview', label: 'Calories', emoji: '🔥' },
+                { id: 'section-meds', label: 'Meds', emoji: '💊' },
+                { id: 'section-meals', label: 'Food Log', emoji: '🥗' },
+                { id: 'section-water', label: 'Hydration', emoji: '💧' },
+                { id: 'section-steps', label: 'Steps', emoji: '🚶' },
+                { id: 'section-insights', label: 'Insights', emoji: '✨' },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    soundFx.playTap();
+                    const el = document.getElementById(s.id);
+                    if (el) {
+                      const headerOffset = 135;
+                      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+                      const offsetPosition = Math.max(0, elementPosition - headerOffset);
+                      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100/90 dark:bg-obsidian-900/90 hover:bg-emerald-500/10 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-slate-200/60 dark:border-slate-800/60 shrink-0 transition active:scale-95"
+                >
+                  <span className="text-xs">{s.emoji}</span>
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
         </div>
       </header>

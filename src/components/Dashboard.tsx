@@ -23,8 +23,6 @@ import { MealsTimeline } from './MealsTimeline';
 import { MedicationsCard } from './MedicationsCard';
 import { soundFx } from '../services/soundEffects';
 
-import { DashboardSectionNav } from './DashboardSectionNav';
-
 interface DashboardProps {
   profile: UserProfile;
   activity: DailyActivityLog;
@@ -68,13 +66,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [profile.id, profile.weightKg, profile.targetWeightKg]);
 
   return (
-    <div>
-      {/* Mobile Web Quick Section Jump Pill Bar */}
-      <DashboardSectionNav />
-
-      <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-2">
-        {/* Top Welcome / Hero Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+    <div className="space-y-4 sm:space-y-6 pt-1 sm:pt-2">
+      {/* Top Welcome / Hero Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -250,7 +244,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
     </div>
-  </div>
   );
 };
 

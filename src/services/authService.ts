@@ -89,17 +89,33 @@ class AuthService {
   }
 
   public getGoogleClientId(): string | null {
-    return localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY) || (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || null;
+    try {
+      const stored = localStorage.getItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
+      if (stored && (stored.includes('vitaltrack-health') || stored.length < 20)) {
+        localStorage.removeItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
+        return null;
+      }
+      return stored || (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || null;
+    } catch {
+      return null;
+    }
   }
 
   public setGoogleClientId(clientId: string): void {
-    localStorage.setItem(GOOGLE_CLIENT_ID_STORAGE_KEY, clientId.trim());
+    if (!clientId || clientId.includes('vitaltrack-health')) {
+      localStorage.removeItem(GOOGLE_CLIENT_ID_STORAGE_KEY);
+    } else {
+      localStorage.setItem(GOOGLE_CLIENT_ID_STORAGE_KEY, clientId.trim());
+    }
   }
 
   /**
-   * Loads the Google Identity Services SDK script dynamically
+   * Loads the Google Identity Services SDK script dynamically only if valid client ID exists
    */
   public async loadGoogleScript(): Promise<void> {
+    const clientId = this.getGoogleClientId();
+    if (!clientId) return;
+
     if (this.gisLoaded || window.google?.accounts?.id) {
       this.gisLoaded = true;
       return;
@@ -128,11 +144,8 @@ class AuthService {
     onSuccess: (session: AuthSession, profile: UserProfile) => void,
     buttonContainer?: HTMLElement | null
   ): void {
-    if (!window.google?.accounts?.id) return;
-
     const clientId = this.getGoogleClientId();
-    // Do not attempt to initialize GIS with invalid placeholder to prevent Google 401 popup
-    if (!clientId) return;
+    if (!clientId || !window.google?.accounts?.id) return;
 
     try {
       window.google.accounts.id.initialize({

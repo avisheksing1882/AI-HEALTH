@@ -10,7 +10,8 @@ import {
   Droplet, 
   Scale, 
   Plus,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react';
 import { DailyActivityLog, MealLog, WorkoutLog, UserProfile } from '../types';
 import { db } from '../services/db';
@@ -22,6 +23,7 @@ interface HistoryCalendarViewProps {
   profile: UserProfile;
   onOpenAIScanner: () => void;
   onOpenWorkoutModal: () => void;
+  onBackToDashboard?: () => void;
 }
 
 export const HistoryCalendarView: React.FC<HistoryCalendarViewProps> = ({
@@ -30,6 +32,7 @@ export const HistoryCalendarView: React.FC<HistoryCalendarViewProps> = ({
   profile,
   onOpenAIScanner,
   onOpenWorkoutModal,
+  onBackToDashboard,
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [monthActivities, setMonthActivities] = useState<Record<string, DailyActivityLog>>({});
@@ -119,9 +122,20 @@ export const HistoryCalendarView: React.FC<HistoryCalendarViewProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            History & Diary Archive
-          </h2>
+          <div className="flex items-center gap-3">
+            {onBackToDashboard && (
+              <button
+                onClick={() => { soundFx.playTap(); onBackToDashboard(); }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-800"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Dashboard</span>
+              </button>
+            )}
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+              History & Diary Archive
+            </h2>
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Look back at any past day to inspect meals, step counts, and workouts
           </p>

@@ -427,6 +427,7 @@ export function App() {
                 profile={profile}
                 onOpenAIScanner={() => setIsAIScannerOpen(true)}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}
+                onBackToDashboard={() => setActiveTab('dashboard')}
               />
             )}
           </>

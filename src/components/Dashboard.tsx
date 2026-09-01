@@ -34,6 +34,7 @@ interface DashboardProps {
   onOpenWeightModal: () => void;
   onActivityUpdated: (act: DailyActivityLog) => void;
   onWaterUpdated: (amountMl: number) => void;
+  onLogWaterDelta?: (deltaMl: number) => void;
   onDeleteMeal: (id: string) => void;
 }
 
@@ -49,6 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenWeightModal,
   onActivityUpdated,
   onWaterUpdated,
+  onLogWaterDelta,
   onDeleteMeal,
 }) => {
   const [weeklyWeightAnalysis, setWeeklyWeightAnalysis] = useState<WeeklyWeightAnalysis | null>(null);
@@ -211,6 +213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <WaterTrackerCard
             activity={activity}
             onWaterUpdated={onWaterUpdated}
+            onLogWaterDelta={onLogWaterDelta}
           />
         </div>
 

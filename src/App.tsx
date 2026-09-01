@@ -303,9 +303,31 @@ export function App() {
   };
 
   const handleWaterUpdated = async (amountMl: number) => {
-    if (!profile || !activity) return;
-    const updated = await updateDailyActivity(profile.id, selectedDate, { waterMl: amountMl });
+    if (!profile) return;
+    const cleanAmount = Math.max(0, amountMl);
+    // Immediate optimistic state update
+    setActivity(prev => prev ? { ...prev, waterMl: cleanAmount } : prev);
+    const updated = await updateDailyActivity(profile.id, selectedDate, { waterMl: cleanAmount });
     setActivity(updated);
+  };
+
+  const handleLogWaterDelta = async (deltaMl: number) => {
+    if (!profile || !activity) return;
+    const newTotal = Math.max(0, (activity.waterMl || 0) + deltaMl);
+    const now = new Date();
+    try {
+      await db.waterLogs.put({
+        id: `water-${Date.now()}`,
+        userId: profile.id,
+        date: selectedDate,
+        time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+        amountMl: deltaMl
+      });
+    } catch {
+      // Ignored
+    }
+
+    await notificationService.logWaterIntake(deltaMl, newTotal, activity.waterGoalMl || 3000);
   };
 
   const handleActivityUpdated = (updatedAct: DailyActivityLog) => {
@@ -377,6 +399,7 @@ export function App() {
                 onOpenWeightModal={() => setIsWeightModalOpen(true)}
                 onActivityUpdated={handleActivityUpdated}
                 onWaterUpdated={handleWaterUpdated}
+                onLogWaterDelta={handleLogWaterDelta}
                 onDeleteMeal={handleDeleteMeal}
               />
             )}

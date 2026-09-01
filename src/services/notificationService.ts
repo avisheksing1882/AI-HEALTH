@@ -90,11 +90,34 @@ class NotificationManager {
       try {
         new Notification(title, {
           body: message,
-          icon: '/favicon.ico',
+          icon: '/icon-192.png',
         });
       } catch (e) {
         console.warn('Native notification failed:', e);
       }
+    }
+  }
+
+  /**
+   * Immediately log water drinking action, update interval timer & trigger celebratory chime if goal reached
+   */
+  public async logWaterIntake(amountMl: number, totalMl: number, goalMl: number) {
+    if (!this.currentUserId) return;
+    const userId = this.currentUserId;
+    const now = new Date();
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`vitaltrack_last_water_time_${userId}`, now.toISOString());
+      localStorage.setItem(`vitaltrack_last_water_reminder_${userId}`, now.toISOString());
+    }
+
+    if (totalMl >= goalMl && totalMl - amountMl < goalMl) {
+      soundFx.playRingCelebration();
+      await this.triggerNotification(
+        'Hydration Goal Achieved! 🏆💧',
+        `Fantastic job! You reached your daily hydration goal of ${(goalMl / 1000).toFixed(1)}L (${totalMl}ml total). Your body is fully energized!`,
+        'achievement'
+      );
     }
   }
 
@@ -128,7 +151,7 @@ class NotificationManager {
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
       this.evaluateRules();
-    }, 60000);
+    }, 60000); // Check every minute
     setTimeout(() => this.evaluateRules(), 3000);
   }
 
@@ -146,6 +169,28 @@ class NotificationManager {
       const user = await getUserProfile(userId);
       if (!user) return;
       const activity = await getOrCreateDailyActivity(userId, today, user);
+
+      // 1. 2-Hour Recurring Hydration Reminder (Between 8 AM and 10 PM)
+      if (currentHour >= 8 && currentHour <= 22 && activity.waterMl < activity.waterGoalMl) {
+        if (typeof window !== 'undefined') {
+          const lastWaterLogTime = localStorage.getItem(`vitaltrack_last_water_time_${userId}`);
+          const lastReminderTime = localStorage.getItem(`vitaltrack_last_water_reminder_${userId}`);
+          
+          const lastLogMs = lastWaterLogTime ? new Date(lastWaterLogTime).getTime() : 0;
+          const lastRemMs = lastReminderTime ? new Date(lastReminderTime).getTime() : 0;
+          const mostRecentAction = Math.max(lastLogMs, lastRemMs);
+          
+          const twoHoursMs = 2 * 60 * 60 * 1000; // 2 hours
+          if (mostRecentAction === 0 || (now.getTime() - mostRecentAction) >= twoHoursMs) {
+            await this.triggerNotification(
+              'Hydration Reminder 💧',
+              `Time for a refreshing glass of water! Current progress: ${(activity.waterMl / 1000).toFixed(2)}L / ${(activity.waterGoalMl / 1000).toFixed(1)}L goal.`,
+              'info'
+            );
+            localStorage.setItem(`vitaltrack_last_water_reminder_${userId}`, now.toISOString());
+          }
+        }
+      }
 
       for (const rule of rules) {
         if (rule.snoozedUntil && new Date(rule.snoozedUntil) > now) {
@@ -194,18 +239,6 @@ class NotificationManager {
               );
               await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
             }
-          }
-        }
-
-        // Hydration
-        if (rule.type === 'water_reminder' && currentHour >= 9 && currentHour <= 21) {
-          if (activity.waterMl < activity.waterGoalMl * (currentHour / 22)) {
-            await this.triggerNotification(
-              'Hydration Pulse 💧',
-              `Time for a refreshing glass of water! Current intake: ${activity.waterMl}ml / ${activity.waterGoalMl}ml goal.`,
-              'info'
-            );
-            await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
           }
         }
 

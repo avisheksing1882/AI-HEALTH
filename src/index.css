@@ -64,6 +64,15 @@
   padding-top: max(env(safe-area-inset-top), 0.75rem);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .touch-target {
   min-height: 44px;
   min-width: 44px;

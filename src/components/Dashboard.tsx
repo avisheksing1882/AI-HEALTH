@@ -22,6 +22,8 @@ import { NutritionInsightsCard } from './NutritionInsightsCard';
 import { MealsTimeline } from './MealsTimeline';
 import { soundFx } from '../services/soundEffects';
 
+import { DashboardSectionNav } from './DashboardSectionNav';
+
 interface DashboardProps {
   profile: UserProfile;
   activity: DailyActivityLog;
@@ -67,6 +69,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       
+      {/* Mobile Web Quick Section Jump Pill Bar */}
+      <DashboardSectionNav />
+
       {/* Top Welcome / Hero Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -162,7 +167,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Hero Activity Rings & Calorie Budget Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div id="section-overview" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-28">
         
         {/* Concentric Progress Rings (Apple Health Style) */}
         <div className="lg:col-span-4 bg-white dark:bg-obsidian-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
@@ -197,28 +202,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* AI Nutrition Insights */}
-      <NutritionInsightsCard insights={insights} />
+      <div id="section-insights" className="scroll-mt-28">
+        <NutritionInsightsCard insights={insights} />
+      </div>
 
       {/* Main Grid: Steps & Water (Left) vs Meals Diary (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Movement & Hydration */}
         <div className="lg:col-span-5 space-y-6">
-          <StepTrackerCard
-            activity={activity}
-            profile={profile}
-            onActivityUpdated={onActivityUpdated}
-          />
+          <div id="section-steps" className="scroll-mt-28">
+            <StepTrackerCard
+              activity={activity}
+              profile={profile}
+              onActivityUpdated={onActivityUpdated}
+            />
+          </div>
 
-          <WaterTrackerCard
-            activity={activity}
-            onWaterUpdated={onWaterUpdated}
-            onLogWaterDelta={onLogWaterDelta}
-          />
+          <div id="section-water" className="scroll-mt-28">
+            <WaterTrackerCard
+              activity={activity}
+              onWaterUpdated={onWaterUpdated}
+              onLogWaterDelta={onLogWaterDelta}
+            />
+          </div>
         </div>
 
         {/* Right Column: Meals Timeline */}
-        <div className="lg:col-span-7">
+        <div id="section-meals" className="lg:col-span-7 scroll-mt-28">
           <MealsTimeline
             meals={meals}
             onDeleteMeal={onDeleteMeal}

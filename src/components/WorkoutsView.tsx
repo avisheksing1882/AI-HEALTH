@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, Plus, Trash2, Heart, Clock, Flame, MapPin, Play, Timer, Sparkles } from 'lucide-react';
+import { Dumbbell, Plus, Trash2, Heart, Clock, Flame, MapPin, Play, Timer, Sparkles, ShieldCheck, HeartPulse } from 'lucide-react';
 import { WorkoutLog, DailyActivityLog, UserProfile } from '../types';
 import { ActivityRings } from './ActivityRings';
 import { StepTrackerCard } from './StepTrackerCard';
@@ -24,6 +24,7 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({
 }) => {
   const totalWorkoutMinutes = workouts.reduce((s, w) => s + w.durationMinutes, 0);
   const totalWorkoutCalories = workouts.reduce((s, w) => s + w.caloriesBurned, 0);
+  const conditions = profile.healthConditions || [];
 
   const getWorkoutIcon = (type: string) => {
     switch (type) {
@@ -60,6 +61,33 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({
           <span>Record Workout</span>
         </button>
       </div>
+
+      {/* Health Conditions Clinical Directives Alert */}
+      {conditions.length > 0 && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-teal-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <HeartPulse className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-slate-900 dark:text-white">
+                  Clinical Training Protocol Active
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  {conditions.length} Condition{conditions.length > 1 ? 's' : ''} Linked
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                {conditions.includes('knee_pain') && '🦵 Knee-safe low-impact workouts prioritized (cycling, swimming, walking). '}
+                {conditions.includes('back_pain') && '🦴 Core & spinal stabilization emphasized. '}
+                {conditions.includes('pcos_pcod') && '🌸 Steady aerobic + resistance training for insulin sensitivity. '}
+                {conditions.includes('thyroid') && '🦋 Metabolism-stimulating balanced cardio & strength protocols.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Activity Rings & Summary Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

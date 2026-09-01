@@ -1,14 +1,28 @@
-import { ActivityLevel, FitnessGoal, Gender, UserProfile, MealLog, DailyActivityLog, NutritionInsight } from '../types';
+import { ActivityLevel, FitnessGoal, Gender, UserProfile, MealLog, DailyActivityLog, NutritionInsight, HealthCondition } from '../types';
 
-export function calculateBMR(weightKg: number, heightCm: number, age: number, gender: Gender): number {
+export function calculateBMR(
+  weightKg: number, 
+  heightCm: number, 
+  age: number, 
+  gender: Gender,
+  conditions?: HealthCondition[]
+): number {
   // Mifflin-St Jeor Equation
+  let baseBmr: number;
   if (gender === 'male') {
-    return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + 5);
+    baseBmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age + 5);
   } else if (gender === 'female') {
-    return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age - 161);
+    baseBmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age - 161);
   } else {
-    return Math.round(10 * weightKg + 6.25 * heightCm - 5 * age - 78);
+    baseBmr = Math.round(10 * weightKg + 6.25 * heightCm - 5 * age - 78);
   }
+
+  // Clinical adaptation: Hypothyroidism typically reduces BMR by ~5%
+  if (conditions?.includes('thyroid')) {
+    baseBmr = Math.round(baseBmr * 0.95);
+  }
+
+  return baseBmr;
 }
 
 export function calculateTDEE(bmr: number, activityLevel: ActivityLevel): number {
@@ -47,8 +61,13 @@ export function calculateCalorieTarget(tdee: number, goal: FitnessGoal, gender: 
   return Math.max(minFloor, Math.round(target));
 }
 
-export function calculateMacroTargets(calorieTarget: number, weightKg: number, goal: FitnessGoal) {
-  // Protein multiplier: higher for weight loss & muscle gain (1.8-2.2g/kg), maintain (1.6g/kg)
+export function calculateMacroTargets(
+  calorieTarget: number, 
+  weightKg: number, 
+  goal: FitnessGoal,
+  conditions?: HealthCondition[]
+) {
+  // Protein multiplier: higher for weight loss & muscle gain (1.8-2.2g/kg)
   let proteinPerKg = 1.8;
   if (goal === 'lose_fast' || goal === 'lose_moderate') {
     proteinPerKg = 2.0; // preserve lean mass in deficit
@@ -56,19 +75,26 @@ export function calculateMacroTargets(calorieTarget: number, weightKg: number, g
     proteinPerKg = 2.2;
   }
 
+  // PCOS / PCOD / Thyroid clinical boost for satiety and hormonal balance
+  if (conditions?.includes('pcos_pcod') || conditions?.includes('thyroid')) {
+    proteinPerKg = Math.max(proteinPerKg, 2.1);
+  }
+
   const proteinGrams = Math.round(Math.min(weightKg * proteinPerKg, (calorieTarget * 0.35) / 4));
   const proteinCalories = proteinGrams * 4;
 
-  // Fat target: ~25-30% of total calories
-  const fatCalories = calorieTarget * 0.28;
+  // Fat target: ~25-30% of total calories (healthy unsaturated fats prioritized)
+  const fatFraction = conditions?.includes('pcos_pcod') ? 0.30 : 0.28;
+  const fatCalories = calorieTarget * fatFraction;
   const fatGrams = Math.round(fatCalories / 9);
 
   // Carbs target: remaining calories
   const carbsCalories = Math.max(0, calorieTarget - proteinCalories - (fatGrams * 9));
   const carbsGrams = Math.round(carbsCalories / 4);
 
-  // Fiber target: 14g per 1000 calories
-  const fiberGrams = Math.round((calorieTarget / 1000) * 14);
+  // Fiber target: 14-16g per 1000 calories
+  const fiberPerThousand = (conditions?.includes('pcos_pcod') || conditions?.includes('diabetes_type2')) ? 16 : 14;
+  const fiberGrams = Math.round((calorieTarget / 1000) * fiberPerThousand);
 
   return {
     proteinGramsTarget: proteinGrams,
@@ -241,28 +267,73 @@ export function generateNutritionInsights(
     });
   }
 
-  // Activity & Step Insights
-  if (activity.steps >= activity.stepGoal) {
+  // Health Condition Specific Protocols & Clinical Insights
+  const userConditions = profile.healthConditions || [];
+
+  if (userConditions.includes('thyroid')) {
     insights.push({
-      id: 'step-goal-met',
-      type: 'positive',
-      title: 'Step Goal Crushed!',
-      description: `Completed ${activity.steps.toLocaleString()} steps! You've burned ~${activity.activeCaloriesBurned} active kcal.`,
-      metric: `${activity.steps.toLocaleString()} steps`,
-      iconName: 'Award',
+      id: 'cond-thyroid',
+      type: 'tip',
+      title: 'Thyroid Metabolic Protocol 🦋',
+      description: 'Focus on selenium & zinc rich foods (pumpkin seeds, eggs, Brazil nuts, lentils) to optimize T4 to T3 conversion. Ensure consistent meal timings.',
+      metric: 'Active Protocol',
+      iconName: 'Sparkles',
     });
-  } else if (activity.steps < activity.stepGoal * 0.4) {
-    const hoursNow = new Date().getHours();
-    if (hoursNow >= 16) {
-      insights.push({
-        id: 'step-catchup',
-        type: 'info',
-        title: 'Step Catch-up Opportunity',
-        description: `You're at ${activity.steps.toLocaleString()} steps. A 30-min walk will add ~3,000 steps to reach your goal!`,
-        metric: `${Math.round((activity.steps / activity.stepGoal) * 100)}%`,
-        iconName: 'Footprints',
-      });
-    }
+  }
+
+  if (userConditions.includes('pcos_pcod')) {
+    insights.push({
+      id: 'cond-pcos',
+      type: 'tip',
+      title: 'PCOS Hormone & Insulin Balance 🌸',
+      description: 'Prioritize low-glycemic carbs and high-protein pairings. Inositol & magnesium rich foods (spinach, almonds, legumes) stabilize androgen response.',
+      metric: 'Hormone Care',
+      iconName: 'Leaf',
+    });
+  }
+
+  if (userConditions.includes('knee_pain')) {
+    insights.push({
+      id: 'cond-knee-pain',
+      type: 'tip',
+      title: 'Knee Joint Protection Protocol 🦵',
+      description: 'Low-impact movement active: Favor cycling, swimming, brisk flat walking, and seated leg extensions. Avoid high-impact jumps or deep loaded squats.',
+      metric: 'Low Impact',
+      iconName: 'ShieldCheck',
+    });
+  }
+
+  if (userConditions.includes('back_pain')) {
+    insights.push({
+      id: 'cond-back-pain',
+      type: 'tip',
+      title: 'Spinal Support Protocol 🦴',
+      description: 'Incorporate bird-dogs, glute bridges, and pelvic tilts. Avoid heavy compressive spine loading and maintain neutral posture.',
+      metric: 'Core Guard',
+      iconName: 'ShieldCheck',
+    });
+  }
+
+  if (userConditions.includes('diabetes_type2')) {
+    insights.push({
+      id: 'cond-diabetes',
+      type: 'tip',
+      title: 'Glucose Curve Management 🩸',
+      description: 'Pair all carbohydrates with dietary fiber and healthy proteins to reduce glycemic spikes. A 10-min post-meal walk significantly lowers peak glucose.',
+      metric: 'Glycemic Care',
+      iconName: 'Droplet',
+    });
+  }
+
+  if (userConditions.includes('hypertension')) {
+    insights.push({
+      id: 'cond-hypertension',
+      type: 'tip',
+      title: 'Cardiovascular Tension Support 🫀',
+      description: 'Target low-sodium foods (<1,800mg/day) and potassium-rich items (bananas, coconut water, leafy greens) for optimal vascular elasticity.',
+      metric: 'DASH Protocol',
+      iconName: 'Heart',
+    });
   }
 
   // Default welcome / coaching insight if empty

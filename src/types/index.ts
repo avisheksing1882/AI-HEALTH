@@ -3,6 +3,18 @@ export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'very_active' |
 export type FitnessGoal = 'lose_fast' | 'lose_moderate' | 'maintain' | 'gain_lean' | 'gain_mass';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
+export type HealthCondition = 
+  | 'thyroid'         // Hypo / Hyperthyroidism
+  | 'pcos_pcod'       // Polycystic Ovary Syndrome / Disease
+  | 'knee_pain'       // Knee Joint / Patellofemoral Pain
+  | 'back_pain'       // Lower Back / Lumbar Strain
+  | 'diabetes_type2'  // Type 2 Diabetes / Insulin Resistance
+  | 'hypertension'    // High Blood Pressure
+  | 'gerd_acidity'    // Acid Reflux / GERD
+  | 'fatty_liver'     // NAFLD / Fatty Liver
+  | 'uric_acid'       // Gout / High Uric Acid
+  | 'none';
+
 export interface UserProfile {
   id: string; // Unique User ID (e.g. google sub or email-based slug)
   email: string; // User email (e.g. user@gmail.com)
@@ -16,6 +28,7 @@ export interface UserProfile {
   targetWeightKg: number;
   activityLevel: ActivityLevel;
   fitnessGoal: FitnessGoal;
+  healthConditions?: HealthCondition[];
   dailyStepGoal: number;
   dailyActiveCalorieGoal: number;
   dailyExerciseMinutesGoal: number;

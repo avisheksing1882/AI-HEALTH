@@ -241,6 +241,7 @@ export function createDefaultUserProfile(userId: string, email: string, name: st
     targetWeightKg: 58,
     activityLevel: 'moderate',
     fitnessGoal: 'lose_moderate',
+    healthConditions: ['thyroid', 'pcos_pcod'],
     dailyStepGoal: 10000,
     dailyActiveCalorieGoal: 500,
     dailyExerciseMinutesGoal: 45,

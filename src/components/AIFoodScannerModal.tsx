@@ -381,14 +381,31 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                AI Food Lens & Macro Verifier
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-                  Exact AI Recognition
-                </span>
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Direct AI Food Lens
+                </h2>
+                {apiKeyInput ? (
+                  <button
+                    onClick={() => setShowApiKeyPrompt(!showApiKeyPrompt)}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition flex items-center gap-1"
+                    title="Gemini Multimodal AI is active. Click to update key."
+                  >
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Gemini AI Active</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowApiKeyPrompt(true)}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30 hover:bg-amber-500/20 transition flex items-center gap-1 animate-pulse"
+                  >
+                    <Key className="w-3 h-3" />
+                    <span>Connect Free AI Key</span>
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Snap any food item, fruit, or dish — AI identifies exact items & calculates clinical macros
+                Direct AI vision identifies exact dishes, dals, onions, curries, fruits & calculates clinical macros
               </p>
             </div>
           </div>
@@ -404,38 +421,48 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1">
           
-          {/* Optional Gemini API Key Setup Banner if not set */}
+          {/* Gemini API Key Configuration Drawer */}
           {showApiKeyPrompt && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-slate-800 dark:text-slate-200 space-y-2.5">
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-slate-800 dark:text-slate-200 space-y-2.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Key className="w-4 h-4" />
-                  Connect Google Gemini Vision API Key (For Live Photo AI)
+                  Google Gemini Vision AI Setup (Direct Photo Recognition)
                 </span>
                 <button
                   onClick={() => setShowApiKeyPrompt(false)}
-                  className="text-slate-400 hover:text-slate-600 text-xs"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-semibold"
                 >
-                  Dismiss
+                  ✕ Close
                 </button>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                To identify exact food items (e.g. specific fruits, snacks, local dishes), enter your Google Gemini API key once. It is stored securely in your private browser memory.
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                To directly recognize <strong>any customized food, dal, onions, curries, fruits, snacks, or plate components</strong> using Google's generative AI vision, paste your Gemini API key below. Stored securely in your private browser memory.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="password"
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="Paste your AIzaSy... key here"
-                  className="flex-1 bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  placeholder="Paste AIzaSy... API key here"
+                  className="flex-1 bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <button
-                  onClick={handleSaveApiKey}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md transition"
-                >
-                  Save Key
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveApiKey}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md transition whitespace-nowrap"
+                  >
+                    Save & Activate AI
+                  </button>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-obsidian-800 hover:bg-slate-300 dark:hover:bg-obsidian-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition whitespace-nowrap flex items-center gap-1"
+                  >
+                    Get Free Key ↗
+                  </a>
+                </div>
               </div>
             </div>
           )}

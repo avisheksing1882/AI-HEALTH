@@ -237,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile Sub-Row Date Selector Bar */}
-          <div className="md:hidden pb-2.5 pt-0.5 flex items-center justify-center">
+          <div className="md:hidden pb-1.5 pt-0.5 flex items-center justify-center">
             <div className="flex items-center justify-between w-full max-w-sm bg-slate-100/90 dark:bg-obsidian-900/90 rounded-xl p-1 border border-slate-200 dark:border-slate-800 shadow-inner">
               <button
                 onClick={handlePrevDay}

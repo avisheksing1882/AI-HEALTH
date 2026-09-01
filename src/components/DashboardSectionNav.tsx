@@ -59,7 +59,7 @@ export const DashboardSectionNav: React.FC = () => {
   };
 
   return (
-    <div className="md:hidden sticky top-[95px] sm:top-[105px] z-20 -mx-3 px-3 py-1.5 backdrop-blur-xl bg-white/90 dark:bg-obsidian-950/90 border-y border-slate-200/80 dark:border-slate-800/80 transition-all shadow-sm">
+    <div className="md:hidden sticky top-[86px] sm:top-[96px] z-20 -mx-3 px-3 py-1 mb-1 backdrop-blur-xl bg-white/90 dark:bg-obsidian-950/90 border-y border-slate-200/80 dark:border-slate-800/80 transition-all shadow-sm">
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
         {DASHBOARD_SECTIONS.map((section) => {
           const isActive = activeSection === section.id;

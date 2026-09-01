@@ -68,13 +68,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [profile.id, profile.weightKg, profile.targetWeightKg]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       
       {/* Mobile Web Quick Section Jump Pill Bar */}
       <DashboardSectionNav />
 
       {/* Top Welcome / Hero Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">

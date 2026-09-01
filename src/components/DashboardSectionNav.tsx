@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Utensils, Droplet, Footprints, Sparkles, LayoutGrid } from 'lucide-react';
+import { Flame, Utensils, Droplet, Footprints, Sparkles, Pill, LayoutGrid } from 'lucide-react';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 
 interface SectionItem {
@@ -10,6 +10,7 @@ interface SectionItem {
 
 const DASHBOARD_SECTIONS: SectionItem[] = [
   { id: 'section-overview', label: 'Calories', icon: <Flame className="w-3.5 h-3.5" /> },
+  { id: 'section-meds', label: 'Meds', icon: <Pill className="w-3.5 h-3.5" /> },
   { id: 'section-meals', label: 'Food Log', icon: <Utensils className="w-3.5 h-3.5" /> },
   { id: 'section-water', label: 'Hydration', icon: <Droplet className="w-3.5 h-3.5" /> },
   { id: 'section-steps', label: 'Steps', icon: <Footprints className="w-3.5 h-3.5" /> },

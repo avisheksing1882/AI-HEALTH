@@ -8,7 +8,9 @@ import {
   WaterLog,
   LearnedFoodCorrection,
   NotificationRule,
-  InAppNotification
+  InAppNotification,
+  Medication,
+  MedicationLog
 } from '../types';
 
 // ==========================================
@@ -130,6 +132,8 @@ export class HealthTrackerDatabase extends Dexie {
   learnedCorrections!: Table<LearnedFoodCorrection, string>;
   notificationRules!: Table<NotificationRule, string>;
   inAppNotifications!: Table<InAppNotification, string>;
+  medications!: Table<Medication, string>;
+  medicationLogs!: Table<MedicationLog, string>;
 
   constructor() {
     super('VitalTrackAI_Database');
@@ -144,6 +148,11 @@ export class HealthTrackerDatabase extends Dexie {
       learnedCorrections: 'id, userId, originalFoodName, correctedFoodName',
       notificationRules: 'id, userId, type, enabled, [userId+type]',
       inAppNotifications: 'id, userId, timestamp, read, [userId+read]'
+    });
+
+    this.version(2).stores({
+      medications: 'id, userId, frequency, reminderEnabled, [userId+frequency]',
+      medicationLogs: 'id, userId, medicationId, date, status, [userId+date]'
     });
   }
 }
@@ -559,4 +568,81 @@ export async function purgeAllDemoData(): Promise<void> {
   await db.weightLogs.clear();
   await db.waterLogs.clear();
   await db.inAppNotifications.clear();
+  await db.medications.clear();
+  await db.medicationLogs.clear();
+}
+
+/**
+ * Get all medications for a user
+ */
+export async function getMedications(userId: string): Promise<Medication[]> {
+  try {
+    const meds = await db.medications.where('userId').equals(userId).toArray();
+    if (meds.length > 0) return meds;
+    return readFromLocalCache<Medication>(userId, 'medications');
+  } catch (e) {
+    console.warn('Error reading medications:', e);
+    return readFromLocalCache<Medication>(userId, 'medications');
+  }
+}
+
+/**
+ * Save / update a medication
+ */
+export async function saveMedication(med: Medication): Promise<void> {
+  try {
+    await db.medications.put(med);
+  } catch (e) {
+    console.warn('Error saving medication to IndexedDB:', e);
+  }
+  const cached = readFromLocalCache<Medication>(med.userId, 'medications');
+  const filtered = cached.filter(m => m.id !== med.id);
+  filtered.push(med);
+  saveToLocalCache(med.userId, 'medications', filtered);
+}
+
+/**
+ * Delete a medication
+ */
+export async function deleteMedication(userId: string, medId: string): Promise<void> {
+  try {
+    await db.medications.delete(medId);
+    await db.medicationLogs.where('medicationId').equals(medId).delete();
+  } catch (e) {
+    console.warn('Error deleting medication from IndexedDB:', e);
+  }
+  const cached = readFromLocalCache<Medication>(userId, 'medications');
+  const filtered = cached.filter(m => m.id !== medId);
+  saveToLocalCache(userId, 'medications', filtered);
+}
+
+/**
+ * Log medication taken status for a date
+ */
+export async function logMedicationStatus(log: MedicationLog): Promise<void> {
+  try {
+    await db.medicationLogs.put(log);
+  } catch (e) {
+    console.warn('Error logging medication status to IndexedDB:', e);
+  }
+  const cached = readFromLocalCache<MedicationLog>(log.userId, 'medicationLogs');
+  const filtered = cached.filter(l => !(l.medicationId === log.medicationId && l.date === log.date));
+  filtered.push(log);
+  saveToLocalCache(log.userId, 'medicationLogs', filtered);
+}
+
+/**
+ * Get medication logs for a specific date
+ */
+export async function getMedicationLogsForDate(userId: string, date: string): Promise<MedicationLog[]> {
+  try {
+    const logs = await db.medicationLogs.where('userId').equals(userId).and(l => l.date === date).toArray();
+    if (logs.length > 0) return logs;
+    const cached = readFromLocalCache<MedicationLog>(userId, 'medicationLogs');
+    return cached.filter(l => l.date === date);
+  } catch (e) {
+    console.warn('Error getting medication logs:', e);
+    const cached = readFromLocalCache<MedicationLog>(userId, 'medicationLogs');
+    return cached.filter(l => l.date === date);
+  }
 }

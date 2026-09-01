@@ -20,6 +20,7 @@ import { StepTrackerCard } from './StepTrackerCard';
 import { WaterTrackerCard } from './WaterTrackerCard';
 import { NutritionInsightsCard } from './NutritionInsightsCard';
 import { MealsTimeline } from './MealsTimeline';
+import { MedicationsCard } from './MedicationsCard';
 import { soundFx } from '../services/soundEffects';
 
 import { DashboardSectionNav } from './DashboardSectionNav';
@@ -199,6 +200,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
 
+      </div>
+
+      {/* Daily Medications & Supplements Section */}
+      <div id="section-meds" className="scroll-mt-28">
+        <MedicationsCard
+          profile={profile}
+          selectedDate={activity.date}
+        />
       </div>
 
       {/* AI Nutrition Insights */}

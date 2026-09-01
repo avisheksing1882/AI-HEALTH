@@ -236,6 +236,35 @@ export interface NutritionInsight {
   iconName: string;
 }
 
+export type MedicationFrequency = 'daily' | 'twice_daily' | 'three_times_daily' | 'weekly' | 'as_needed';
+export type MedicationTiming = 'before_breakfast' | 'after_breakfast' | 'with_lunch' | 'after_dinner' | 'before_bed' | 'specific_time';
+
+export interface Medication {
+  id: string;
+  userId: string;
+  name: string;
+  dosage: string;
+  frequency: MedicationFrequency;
+  timing: MedicationTiming;
+  reminderTime: string; // "07:00", "08:30", "20:00"
+  reminderEnabled: boolean;
+  conditionTag?: HealthCondition;
+  notes?: string;
+  color?: string;
+  createdAt: string;
+}
+
+export interface MedicationLog {
+  id: string;
+  userId: string;
+  medicationId: string;
+  medicationName: string;
+  date: string; // YYYY-MM-DD
+  timeTaken: string; // HH:mm
+  status: 'taken' | 'skipped';
+  timestamp: string;
+}
+
 export interface DaySummary {
   date: string;
   activity: DailyActivityLog;

@@ -259,6 +259,41 @@ class NotificationManager {
           }
         }
       }
+
+      // 💊 Active Medication & Pill Reminders Check
+      const userMeds = await db.medications
+        .where('userId')
+        .equals(userId)
+        .and(m => m.reminderEnabled)
+        .toArray();
+
+      for (const med of userMeds) {
+        if (!med.reminderTime) continue;
+        const medMinutes = this.timeStringToMinutes(med.reminderTime);
+        const currentMinutes = this.timeStringToMinutes(currentTimeStr);
+        const diffMinutes = Math.abs(medMinutes - currentMinutes);
+
+        if (diffMinutes <= 15) {
+          // Check if already taken today
+          const logsToday = await db.medicationLogs
+            .where('userId')
+            .equals(userId)
+            .and(l => l.medicationId === med.id && l.date === today && l.status === 'taken')
+            .count();
+
+          if (logsToday === 0) {
+            const lastMedTrigger = localStorage.getItem(`vitaltrack_med_reminder_${med.id}_${today}`);
+            if (!lastMedTrigger) {
+              await this.triggerNotification(
+                `Medication Reminder: ${med.name} 💊`,
+                `Time to take ${med.name} (${med.dosage}, ${med.timing.replace('_', ' ')}). ${med.notes ? `Note: ${med.notes}` : ''}`,
+                'reminder'
+              );
+              localStorage.setItem(`vitaltrack_med_reminder_${med.id}_${today}`, now.toISOString());
+            }
+          }
+        }
+      }
     } catch (err) {
       console.warn('Error evaluating notification rules:', err);
     }

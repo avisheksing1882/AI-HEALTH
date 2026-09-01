@@ -337,12 +337,25 @@ class HighPrecisionMovementTracker {
     this.scheduleDbSave();
   }
 
+  public syncWater(amountMl: number) {
+    if (this.currentActivity) {
+      this.currentActivity.waterMl = amountMl;
+    }
+  }
+
   private dbSaveTimer: NodeJS.Timeout | null = null;
   private scheduleDbSave() {
     if (this.dbSaveTimer || !this.currentUserId || !this.currentActivity) return;
     this.dbSaveTimer = setTimeout(async () => {
       if (this.currentUserId && this.currentActivity) {
-        await updateDailyActivity(this.currentUserId, this.currentActivity.date, this.currentActivity);
+        await updateDailyActivity(this.currentUserId, this.currentActivity.date, {
+          steps: this.currentActivity.steps,
+          distanceKm: this.currentActivity.distanceKm,
+          activeCaloriesBurned: this.currentActivity.activeCaloriesBurned,
+          activeMinutes: this.currentActivity.activeMinutes,
+          hourlySteps: this.currentActivity.hourlySteps,
+          isGoalMet: this.currentActivity.isGoalMet,
+        });
       }
       this.dbSaveTimer = null;
     }, 1500);

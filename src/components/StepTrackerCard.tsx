@@ -31,14 +31,24 @@ export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
   useEffect(() => {
     const unsubscribe = pedometer.subscribe((newActivity, newGps) => {
       if (newActivity.date === activity.date) {
-        onActivityUpdated(newActivity);
+        onActivityUpdated({
+          ...activity,
+          steps: newActivity.steps,
+          distanceKm: newActivity.distanceKm,
+          activeCaloriesBurned: newActivity.activeCaloriesBurned,
+          activeMinutes: newActivity.activeMinutes,
+          hourlySteps: newActivity.hourlySteps,
+          isGoalMet: newActivity.isGoalMet,
+          totalCaloriesBurned: newActivity.activeCaloriesBurned + (activity.restingCaloriesBurned || 0),
+          waterMl: activity.waterMl,
+        });
       }
       if (newGps) {
         setGpsState(newGps);
       }
     });
     return () => unsubscribe();
-  }, [activity.date, onActivityUpdated]);
+  }, [activity.date, activity.waterMl, activity.restingCaloriesBurned, onActivityUpdated]);
 
   const handleToggleGps = async () => {
     soundFx.playTap();

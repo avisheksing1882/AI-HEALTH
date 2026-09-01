@@ -305,6 +305,7 @@ export function App() {
   const handleWaterUpdated = async (amountMl: number) => {
     if (!profile) return;
     const cleanAmount = Math.max(0, amountMl);
+    pedometer.syncWater(cleanAmount);
     // Immediate optimistic state update
     setActivity(prev => prev ? { ...prev, waterMl: cleanAmount } : prev);
     const updated = await updateDailyActivity(profile.id, selectedDate, { waterMl: cleanAmount });

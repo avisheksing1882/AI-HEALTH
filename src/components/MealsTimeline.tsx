@@ -65,8 +65,19 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
           </div>
         </div>
 
-        {/* Quick Action Button */}
-        <div className="flex items-center gap-1.5">
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-2">
+          {onOpenManualLogger && (
+            <button
+              onClick={() => { soundFx.playTap(); onOpenManualLogger(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-obsidian-800 hover:bg-slate-200 dark:hover:bg-obsidian-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700"
+              title="Add Meal Manually"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Manual Log</span>
+            </button>
+          )}
+
           <button
             onClick={() => { soundFx.playTap(); onOpenAIScanner(); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500 hover:text-white transition"

@@ -448,6 +448,10 @@ export function App() {
         onMealSaved={handleMealSaved}
         profile={profile}
         selectedDate={selectedDate}
+        onOpenManualLogger={() => {
+          setIsAIScannerOpen(false);
+          setIsManualFoodOpen(true);
+        }}
       />
 
       <FoodLoggerModal

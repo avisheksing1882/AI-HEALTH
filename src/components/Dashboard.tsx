@@ -85,10 +85,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => { soundFx.playTap(); onOpenAIScanner(); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 transition transform active:scale-95"
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 transition transform active:scale-95"
           >
             <Camera className="w-4 h-4" />
             <span>AI Food Lens</span>
+          </button>
+
+          <button
+            onClick={() => { soundFx.playTap(); onOpenManualFoodLogger(); }}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-obsidian-800 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-800 transition active:scale-95 shadow-sm"
+            title="Add Meal Manually"
+          >
+            <Plus className="w-4 h-4 text-emerald-500" />
+            <span>Manual Meal</span>
           </button>
 
           <button

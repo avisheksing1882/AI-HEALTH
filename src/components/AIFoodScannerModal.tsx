@@ -15,7 +15,11 @@ import {
   Search,
   Key,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Image as ImageIcon,
+  PenLine,
+  UploadCloud,
+  FileText
 } from 'lucide-react';
 import { FoodItemNutrition, MealLog, MealType, UserProfile } from '../types';
 import { 
@@ -36,6 +40,7 @@ interface AIFoodScannerModalProps {
   onMealSaved: (meal: MealLog) => void;
   profile: UserProfile;
   selectedDate: string;
+  onOpenManualLogger?: () => void;
 }
 
 export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
@@ -44,6 +49,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   onMealSaved,
   profile,
   selectedDate,
+  onOpenManualLogger,
 }) => {
   const [mode, setMode] = useState<'camera' | 'upload' | 'presets'>('camera');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -412,12 +418,30 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => { soundFx.playTap(); onClose(); }}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-obsidian-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenManualLogger && (
+              <button
+                onClick={() => {
+                  soundFx.playTap();
+                  stopCamera();
+                  onClose();
+                  onOpenManualLogger();
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-obsidian-800 hover:bg-slate-300 dark:hover:bg-obsidian-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition"
+                title="Switch to Manual Food Logger"
+              >
+                <PenLine className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Manual Entry</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => { soundFx.playTap(); stopCamera(); onClose(); }}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-obsidian-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -551,17 +575,130 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 </button>
               </div>
 
-              {/* Shutter Capture Button */}
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
+              {/* Shutter & Gallery Controls */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-6">
+                {/* Direct Gallery Pick Shortcut */}
+                <label 
+                  className="w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition cursor-pointer flex items-center justify-center shadow-lg active:scale-95"
+                  title="Upload already taken photo from Gallery"
+                >
+                  <ImageIcon className="w-5 h-5 text-emerald-400" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                </label>
+
+                {/* Camera Shutter Capture Button */}
                 <button
                   onClick={capturePhotoFromCamera}
                   className="w-16 h-16 rounded-full bg-white p-1 shadow-2xl hover:scale-105 active:scale-95 transition flex items-center justify-center border-4 border-emerald-500"
-                  title="Capture Photo"
+                  title="Capture Live Photo"
                 >
                   <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-inner">
                     <Camera className="w-6 h-6" />
                   </div>
                 </button>
+
+                {/* Manual Log Switch Shortcut */}
+                {onOpenManualLogger && (
+                  <button
+                    onClick={() => {
+                      soundFx.playTap();
+                      stopCamera();
+                      onClose();
+                      onOpenManualLogger();
+                    }}
+                    className="w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition flex items-center justify-center shadow-lg active:scale-95"
+                    title="Add Meal Manually"
+                  >
+                    <PenLine className="w-5 h-5 text-amber-400" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Camera Inactive / Permission Fallback Screen */}
+          {mode === 'camera' && !isCameraActive && !isScanning && !analysisResult && (
+            <div className="rounded-2xl bg-slate-50 dark:bg-obsidian-950 p-6 sm:p-8 text-center border border-dashed border-slate-300 dark:border-slate-800 space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <Camera className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Live Camera Inactive or Unsupported
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
+                  Upload an already taken food picture from your photo gallery, or enter the meal details manually.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <label className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 cursor-pointer transition active:scale-95">
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Choose Photo from Gallery / Device</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                </label>
+
+                {onOpenManualLogger && (
+                  <button
+                    onClick={() => {
+                      soundFx.playTap();
+                      stopCamera();
+                      onClose();
+                      onOpenManualLogger();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-obsidian-800 hover:bg-slate-300 dark:hover:bg-obsidian-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                  >
+                    <PenLine className="w-4 h-4 text-emerald-500" />
+                    <span>Add Meal Manually</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => startCamera(isFrontCamera)}
+                  className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition"
+                >
+                  Retry Camera
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Photo Upload Dropzone Screen */}
+          {mode === 'upload' && !isScanning && !analysisResult && (
+            <div className="rounded-2xl bg-slate-50 dark:bg-obsidian-950 p-6 sm:p-10 text-center border-2 border-dashed border-emerald-500/40 hover:border-emerald-500 transition space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
+                <UploadCloud className="w-8 h-8 animate-bounce-subtle" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Upload an Already Taken Photo
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
+                  Select any photo from your phone's gallery, camera roll, or computer. AI vision will automatically identify dishes, ingredients & calculate nutrition.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <label className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold text-xs shadow-xl shadow-emerald-500/25 cursor-pointer transition transform active:scale-95">
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Select Photo from Gallery / Files</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                </label>
+
+                {onOpenManualLogger && (
+                  <button
+                    onClick={() => {
+                      soundFx.playTap();
+                      stopCamera();
+                      onClose();
+                      onOpenManualLogger();
+                    }}
+                    className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-200 dark:bg-obsidian-800 hover:bg-slate-300 dark:hover:bg-obsidian-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                  >
+                    <PenLine className="w-4 h-4 text-emerald-500" />
+                    <span>Or Add Meal Manually</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

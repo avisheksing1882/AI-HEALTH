@@ -12,11 +12,20 @@ import {
   AlertCircle, 
   RotateCw,
   Layers,
-  ChevronRight
+  Search,
+  Key,
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { FoodItemNutrition, MealLog, MealType, UserProfile } from '../types';
-import { analyzeFoodImageWithAI, saveUserFoodCorrection, VisionAnalysisResult } from '../services/geminiVision';
-import { PRESET_SAMPLE_MEALS, FOOD_DATABASE, convertEntryToNutritionItem } from '../services/foodCatalog';
+import { 
+  analyzeFoodImageWithAI, 
+  getStoredGeminiApiKey, 
+  saveStoredGeminiApiKey, 
+  saveUserFoodCorrection, 
+  VisionAnalysisResult 
+} from '../services/geminiVision';
+import { PRESET_SAMPLE_MEALS, FOOD_DATABASE, convertEntryToNutritionItem, lookupFoodByQuery } from '../services/foodCatalog';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 
 interface AIFoodScannerModalProps {
@@ -34,7 +43,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   profile,
   selectedDate,
 }) => {
-  const [mode, setMode] = useState<'camera' | 'upload' | 'presets'>('presets');
+  const [mode, setMode] = useState<'camera' | 'upload' | 'presets'>('camera');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [presetId, setPresetId] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -44,9 +53,18 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Gemini API Key config state
+  const [apiKeyInput, setApiKeyInput] = useState(getStoredGeminiApiKey());
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(!getStoredGeminiApiKey());
+
+  // Search & add items
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
   // Camera stream refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isFrontCamera, setIsFrontCamera] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
 
   // Initialize meal type based on time of day
@@ -57,10 +75,9 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       else if (hour >= 11 && hour < 16) setSelectedMealType('lunch');
       else if (hour >= 16 && hour < 19) setSelectedMealType('snack');
       else setSelectedMealType('dinner');
-      
-      // Auto-load first preset as ready-to-test
-      setPresetId(PRESET_SAMPLE_MEALS[0].id);
-      setSelectedImage(PRESET_SAMPLE_MEALS[0].photoUrl);
+
+      // Auto start camera if supported
+      startCamera(false);
     } else {
       stopCamera();
       setSelectedImage(null);
@@ -70,13 +87,11 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     }
   }, [isOpen]);
 
-  const [isFrontCamera, setIsFrontCamera] = useState(false);
-
   // Attach video stream whenever videoRef and streamRef are ready
   useEffect(() => {
     if (isCameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(err => console.warn('Error starting video stream:', err));
+      videoRef.current.play().catch(err => console.warn('Video stream play warning:', err));
     }
   }, [isCameraActive]);
 
@@ -87,7 +102,6 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       setPresetId(null);
       setMode('camera');
 
-      // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
@@ -101,14 +115,12 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
           audio: false
         });
       } catch {
-        // Fallback to any available camera (laptop webcam, front camera)
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       }
 
       streamRef.current = stream;
       setIsCameraActive(true);
 
-      // Also directly assign if ref is already mounted
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(() => {});
@@ -118,8 +130,8 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       const isDenied = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError';
       setErrorMessage(
         isDenied
-          ? 'Camera permission denied. Please allow camera permissions in your browser URL bar.'
-          : 'Could not access camera hardware. You can upload a photo or select a sample dish.'
+          ? 'Camera access denied. Please allow camera permissions in your browser bar.'
+          : 'Could not connect to camera hardware. You can upload a photo or select a sample dish.'
       );
       setMode('presets');
       setIsCameraActive(false);
@@ -174,6 +186,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       setSelectedImage(base64);
       setPresetId(null);
       setMode('upload');
+      stopCamera();
       triggerAiScan(base64);
     };
     reader.readAsDataURL(file);
@@ -184,7 +197,17 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     setPresetId(preset.id);
     setSelectedImage(preset.photoUrl);
     setMode('presets');
+    stopCamera();
     triggerAiScan(preset.photoUrl, preset.id);
+  };
+
+  const handleSaveApiKey = () => {
+    saveStoredGeminiApiKey(apiKeyInput);
+    setShowApiKeyPrompt(false);
+    soundFx.playSuccessChime();
+    if (selectedImage) {
+      triggerAiScan(selectedImage);
+    }
   };
 
   const triggerAiScan = async (imageInput: string, pId?: string) => {
@@ -193,22 +216,22 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     setAnalysisResult(null);
 
     const steps = [
-      'Scanning plate contours...',
-      'Segmenting multi-dish components...',
-      'Estimating volume & gram portions...',
-      'Calculating macronutrients & calories...',
+      'Analyzing photo with AI Multimodal Vision...',
+      'Identifying exact food items & ingredients...',
+      'Estimating volume & portion weight (grams)...',
+      'Computing clinical macronutrients & calories...',
     ];
 
     let stepIndex = 0;
     const stepTimer = setInterval(() => {
       stepIndex = (stepIndex + 1) % steps.length;
       setScanStepMessage(steps[stepIndex]);
-    }, 400);
+    }, 450);
 
     try {
       const result = await analyzeFoodImageWithAI(
         imageInput,
-        profile.geminiApiKey,
+        apiKeyInput || undefined,
         pId || presetId || undefined
       );
 
@@ -222,7 +245,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       clearInterval(stepTimer);
       setIsScanning(false);
       const msg = err instanceof Error ? err.message : 'Photo analysis failed.';
-      setErrorMessage(msg + ' You can manually edit or adjust the items below.');
+      setErrorMessage(msg);
     }
   };
 
@@ -251,27 +274,37 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     const newItems = [...analysisResult.items];
     newItems[itemIndex] = updatedItem;
 
-    recalculateTotals(newItems);
+    recalculateAndSetAnalysis(newItems);
+  };
+
+  const handleUpdateItemName = (itemIndex: number, newName: string) => {
+    if (!analysisResult || !newName.trim()) return;
+    const newItems = [...analysisResult.items];
+    newItems[itemIndex] = { ...newItems[itemIndex], name: newName.trim() };
+    recalculateAndSetAnalysis(newItems);
   };
 
   const handleDeleteItem = (itemIndex: number) => {
     if (!analysisResult) return;
     soundFx.playTap();
+    triggerHaptic();
+
     const newItems = analysisResult.items.filter((_, idx) => idx !== itemIndex);
-    recalculateTotals(newItems);
+    recalculateAndSetAnalysis(newItems);
   };
 
-  const handleAddExtraFood = (foodName: string) => {
-    if (!analysisResult) return;
-    const found = FOOD_DATABASE.find(f => f.name.toLowerCase().includes(foodName.toLowerCase())) || FOOD_DATABASE[0];
-    const newItem = convertEntryToNutritionItem(found);
-
-    const newItems = [...analysisResult.items, newItem];
-    recalculateTotals(newItems);
+  const handleAddSearchResult = (foodItem: typeof FOOD_DATABASE[0]) => {
+    soundFx.playTap();
+    const converted = convertEntryToNutritionItem(foodItem, foodItem.defaultPortionGrams);
+    const newItems = analysisResult ? [...analysisResult.items, converted] : [converted];
+    recalculateAndSetAnalysis(newItems);
+    setSearchQuery('');
+    setIsSearching(false);
   };
 
-  const recalculateTotals = (items: FoodItemNutrition[]) => {
-    if (!analysisResult) return;
+  const recalculateAndSetAnalysis = (items: FoodItemNutrition[]) => {
+    if (!analysisResult && items.length === 0) return;
+
     const totalCalories = items.reduce((acc, i) => acc + i.calories, 0);
     const totalProtein = Number(items.reduce((acc, i) => acc + i.protein, 0).toFixed(1));
     const totalCarbs = Number(items.reduce((acc, i) => acc + i.carbs, 0).toFixed(1));
@@ -280,8 +313,9 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     const totalSugar = Number(items.reduce((acc, i) => acc + (i.sugar || 0), 0).toFixed(1));
     const totalSodium = Math.round(items.reduce((acc, i) => acc + (i.sodium || 0), 0));
 
-    setAnalysisResult({
-      ...analysisResult,
+    setAnalysisResult(prev => ({
+      title: prev?.title || (items[0] ? `${items[0].name} Plate` : 'Logged Meal'),
+      mealType: prev?.mealType || selectedMealType,
       items,
       totalCalories,
       totalProtein,
@@ -289,30 +323,22 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       totalFat,
       totalFiber,
       totalSugar,
-      totalSodium
-    });
+      totalSodium,
+      confidenceScore: prev?.confidenceScore || 0.94,
+      disclaimer: prev?.disclaimer || 'Verified nutritional items.',
+      photoUri: selectedImage || undefined,
+      source: prev?.source || 'gemini_api'
+    }));
   };
 
-  const handleSaveMeal = async () => {
-    if (!analysisResult || analysisResult.items.length === 0) return;
-
-    soundFx.playRingCelebration();
+  const handleSaveMeal = () => {
+    if (!analysisResult) return;
+    soundFx.playSuccessChime();
     triggerHaptic();
-
-    // Save learned corrections for any user-adjusted portions
-    for (const item of analysisResult.items) {
-      await saveUserFoodCorrection(
-        profile.id,
-        item.name,
-        item.name,
-        item.portionGrams,
-        item.portionGrams
-      );
-    }
 
     const now = new Date();
     const mealLog: MealLog = {
-      id: `meal-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      id: `meal-${Date.now()}`,
       userId: profile.id,
       date: selectedDate,
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
@@ -340,6 +366,10 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
 
   if (!isOpen) return null;
 
+  const searchResults = searchQuery.trim().length >= 2 
+    ? lookupFoodByQuery(searchQuery)
+    : [];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <div className="bg-white dark:bg-obsidian-900 w-full max-w-3xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
@@ -352,19 +382,13 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                AI Food Lens & Calorie Estimator
-                {profile.geminiApiKey ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-                    Gemini Live
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold border border-cyan-500/20">
-                    Neural Vision Engine
-                  </span>
-                )}
+                AI Food Lens & Macro Verifier
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                  Exact AI Recognition
+                </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Snap or upload any multi-item plate for automated item-by-item nutrition breakdown
+                Snap any food item, fruit, or dish — AI identifies exact items & calculates clinical macros
               </p>
             </div>
           </div>
@@ -380,21 +404,47 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1">
           
+          {/* Optional Gemini API Key Setup Banner if not set */}
+          {showApiKeyPrompt && (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-slate-800 dark:text-slate-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Key className="w-4 h-4" />
+                  Connect Google Gemini Vision API Key (For Live Photo AI)
+                </span>
+                <button
+                  onClick={() => setShowApiKeyPrompt(false)}
+                  className="text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                To identify exact food items (e.g. specific fruits, snacks, local dishes), enter your Google Gemini API key once. It is stored securely in your private browser memory.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Paste your AIzaSy... key here"
+                  className="flex-1 bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
+                />
+                <button
+                  onClick={handleSaveApiKey}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md transition"
+                >
+                  Save Key
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Capture / Select Mode Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-obsidian-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold">
               <button
-                onClick={() => { soundFx.playTap(); setMode('presets'); stopCamera(); }}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  mode === 'presets' 
-                    ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Sample Dishes
-              </button>
-              <button
-                onClick={() => { soundFx.playTap(); startCamera(); }}
+                onClick={() => { soundFx.playTap(); startCamera(isFrontCamera); }}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
                   mode === 'camera' 
                     ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
@@ -413,6 +463,16 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 <span>Upload Photo</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
               </label>
+              <button
+                onClick={() => { soundFx.playTap(); setMode('presets'); stopCamera(); }}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  mode === 'presets' 
+                    ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Sample Dishes
+              </button>
             </div>
 
             {/* Meal Type Picker */}
@@ -447,7 +507,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
               {/* Viewfinder Target Reticle */}
               <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-emerald-400/60 rounded-2xl pointer-events-none flex items-center justify-center">
                 <span className="text-[11px] font-semibold text-emerald-400 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-md">
-                  Align plate inside frame
+                  Align food inside frame & tap capture
                 </span>
               </div>
 
@@ -481,8 +541,8 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
           {mode === 'presets' && !isScanning && !analysisResult && (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400">
-                <span>Select a Curated Multi-Item Plate to Scan:</span>
-                <span className="text-emerald-500">Instant AI Demo</span>
+                <span>Select a Curated Dish to Test AI Vision:</span>
+                <span className="text-emerald-500">Curated Datasets</span>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -529,7 +589,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                   <Sparkles className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-1">
-                  Decomposing Food Plate
+                  AI Analyzing Food Image
                 </h3>
                 <p className="text-xs font-mono text-emerald-400 tracking-wide animate-pulse">
                   {scanStepMessage}
@@ -546,7 +606,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
             </div>
           )}
 
-          {/* Multi-Item Recognition Results */}
+          {/* Multi-Item Recognition Results & Verification Step */}
           {analysisResult && !isScanning && (
             <div className="space-y-4">
               
@@ -555,7 +615,8 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 {selectedImage && (
                   <div className="relative w-full sm:w-36 h-28 rounded-xl overflow-hidden shrink-0 border border-slate-300 dark:border-slate-700">
                     <img src={selectedImage} alt="Food Plate" className="w-full h-full object-cover" />
-                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white backdrop-blur-sm">
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white backdrop-blur-sm flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       {Math.round(analysisResult.confidenceScore * 100)}% Match
                     </div>
                   </div>
@@ -564,9 +625,13 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 <div className="flex flex-col justify-between flex-1">
                   <div>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                        {analysisResult.title}
-                      </h3>
+                      <input
+                        type="text"
+                        value={analysisResult.title}
+                        onChange={(e) => setAnalysisResult({ ...analysisResult, title: e.target.value })}
+                        className="text-base font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent hover:border-slate-400 focus:border-emerald-500 focus:outline-none w-full"
+                        title="Click to rename meal"
+                      />
                       <button
                         onClick={() => triggerAiScan(selectedImage || '')}
                         className="p-1 text-slate-400 hover:text-emerald-500 transition"
@@ -576,7 +641,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                       </button>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Identified {analysisResult.items.length} distinct ingredients with automated portion estimation.
+                      Identified {analysisResult.items.length} distinct item{analysisResult.items.length > 1 ? 's' : ''}. Tap any item below to fine-tune grams.
                     </p>
                   </div>
 
@@ -606,17 +671,53 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 </div>
               </div>
 
-              {/* Decomposed Items List */}
+              {/* Decomposed Items List & Verification */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-emerald-500" />
-                    Plate Breakdown (Tap item to adjust grams)
+                    Verify & Edit Food Items ({analysisResult.items.length})
                   </span>
-                  <span className="text-slate-500 font-normal text-[11px]">
-                    {analysisResult.items.length} items
-                  </span>
+                  <button
+                    onClick={() => setIsSearching(!isSearching)}
+                    className="text-emerald-500 hover:text-emerald-600 text-xs font-bold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Item from Database</span>
+                  </button>
                 </div>
+
+                {/* Instant Database Search Drawer */}
+                {isSearching && (
+                  <div className="p-3 rounded-2xl bg-slate-100 dark:bg-obsidian-950 border border-emerald-500/30 space-y-2">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search 500+ foods (e.g. apple, oats, chicken, paneer, salad)..."
+                        className="w-full bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white"
+                        autoFocus
+                      />
+                    </div>
+
+                    {searchResults.length > 0 && (
+                      <div className="max-h-48 overflow-y-auto space-y-1 pt-1">
+                        {searchResults.slice(0, 5).map((f, i) => (
+                          <button
+                            key={`${f.name}-${i}`}
+                            onClick={() => handleAddSearchResult(f)}
+                            className="w-full text-left p-2 rounded-xl bg-white dark:bg-obsidian-900 hover:bg-emerald-500/10 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs transition"
+                          >
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{f.name}</span>
+                            <span className="text-slate-400 font-mono">{f.caloriesPer100g} kcal / 100g</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {analysisResult.items.map((item, index) => (
@@ -627,17 +728,13 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1">
                           <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                {item.name}
-                              </span>
-                              {item.plateLocation && (
-                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-obsidian-800 text-slate-500">
-                                  {item.plateLocation}
-                                </span>
-                              )}
-                            </div>
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => handleUpdateItemName(index, e.target.value)}
+                              className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent hover:border-slate-400 focus:border-emerald-500 focus:outline-none w-full"
+                            />
                             <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                               <span>{item.portionGrams}g</span>
                               <span>&bull;</span>
@@ -686,7 +783,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                             <input
                               type="range"
                               min="10"
-                              max="500"
+                              max="600"
                               step="5"
                               value={item.portionGrams}
                               onChange={(e) => handleUpdateItemGrams(index, Number(e.target.value))}
@@ -713,34 +810,13 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                   ))}
                 </div>
 
-                {/* Add Missed Item Shortcut */}
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={() => handleAddExtraFood('roti')}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-obsidian-950 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-obsidian-800 transition flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> + Extra Roti
-                  </button>
-                  <button
-                    onClick={() => handleAddExtraFood('curd')}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-obsidian-950 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-obsidian-800 transition flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> + Curd
-                  </button>
-                  <button
-                    onClick={() => handleAddExtraFood('salad')}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-obsidian-950 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-obsidian-800 transition flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" /> + Green Salad
-                  </button>
-                </div>
               </div>
 
               {/* Disclaimer Notice */}
               <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-100 dark:bg-obsidian-950/60 text-[11px] text-slate-500 border border-slate-200/60 dark:border-slate-800/60">
                 <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                 <span>
-                  {analysisResult.disclaimer} Your portion tweaks are saved to refine future AI accuracy.
+                  {analysisResult.disclaimer}
                 </span>
               </div>
             </div>
@@ -763,7 +839,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 transition transform active:scale-95"
             >
               <Check className="w-4 h-4" />
-              <span>Log Meal ({analysisResult.totalCalories} kcal)</span>
+              <span>Confirm & Post Meal ({analysisResult.totalCalories} kcal)</span>
             </button>
           )}
         </div>

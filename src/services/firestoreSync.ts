@@ -577,3 +577,23 @@ export function subscribeToUserRealtimeSync(
     });
   };
 }
+
+/**
+ * 🗑️ Permanently clear all tracked collections for a user from Cloud Firestore
+ */
+export async function clearAllUserDataFromCloud(userId: string): Promise<void> {
+  const collectionsToClear = ['meals', 'workouts', 'dailyActivity', 'weightLogs', 'waterLogs', 'medicationLogs'];
+  for (const colName of collectionsToClear) {
+    try {
+      const snap = await getDocs(collection(firestore, 'users', userId, colName));
+      if (!snap.empty) {
+        const batch = writeBatch(firestore);
+        snap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+        await batch.commit();
+      }
+    } catch (err) {
+      console.warn(`[Firestore Sync] Failed to clear collection ${colName}:`, err);
+    }
+  }
+}
+

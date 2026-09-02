@@ -470,9 +470,12 @@ export function App() {
                 workouts={workouts}
                 activity={activity}
                 profile={profile}
+                selectedDate={selectedDate}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}
                 onDeleteWorkout={handleDeleteWorkout}
                 onActivityUpdated={handleActivityUpdated}
+                onProfileUpdated={(updated) => setProfile(updated)}
+                onWorkoutLogged={handleWorkoutSaved}
               />
             )}
 

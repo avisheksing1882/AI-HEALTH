@@ -29,6 +29,7 @@ export interface UserProfile {
   activityLevel: ActivityLevel;
   fitnessGoal: FitnessGoal;
   healthConditions?: HealthCondition[];
+  workoutDaysPerWeek?: number; // Target workout days per week (1-7, default 4)
   dailyStepGoal: number;
   dailyActiveCalorieGoal: number;
   dailyExerciseMinutesGoal: number;

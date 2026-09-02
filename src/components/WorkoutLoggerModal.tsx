@@ -10,11 +10,13 @@ import {
   Timer, 
   Check, 
   Activity,
-  Plus
+  Plus,
+  Sparkles
 } from 'lucide-react';
 import { UserProfile, WorkoutLog, WorkoutType } from '../types';
 import { calculateWorkoutCalories } from '../services/nutritionCalculator';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { AIWorkoutEstimatorCard } from './AIWorkoutEstimatorCard';
 
 interface WorkoutLoggerModalProps {
   isOpen: boolean;
@@ -43,7 +45,7 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
   selectedDate,
   profile,
 }) => {
-  const [tab, setTab] = useState<'live' | 'manual'>('live');
+  const [tab, setTab] = useState<'ai' | 'live' | 'manual'>('ai');
   const [selectedType, setSelectedType] = useState<WorkoutType>('gym_strength');
   const [intensity, setIntensity] = useState<'light' | 'moderate' | 'vigorous' | 'extreme'>('moderate');
   const [title, setTitle] = useState('Gym Strength Training');
@@ -195,7 +197,19 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
 
         {/* Tab switcher */}
         <div className="px-5 pt-4">
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-bold">
+          <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-100 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-bold">
+            <button
+              onClick={() => { soundFx.playTap(); setTab('ai'); }}
+              className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+                tab === 'ai'
+                  ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span>AI Summary</span>
+            </button>
+
             <button
               onClick={() => { soundFx.playTap(); setTab('live'); }}
               className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
@@ -205,7 +219,7 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
               }`}
             >
               <Timer className="w-4 h-4" />
-              <span>Live Workout Session</span>
+              <span>Live Session</span>
             </button>
 
             <button
@@ -217,17 +231,29 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
               }`}
             >
               <Plus className="w-4 h-4" />
-              <span>Log Past Workout</span>
+              <span>Manual Entry</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          
-          {/* Sport Selector */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+          {tab === 'ai' && (
+            <AIWorkoutEstimatorCard
+              profile={profile}
+              selectedDate={selectedDate}
+              onWorkoutLogged={(w) => {
+                onWorkoutSaved(w);
+                onClose();
+              }}
+            />
+          )}
+
+          {tab !== 'ai' && (
+            <>
+              {/* Sport Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
               Select Activity:
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -418,8 +444,8 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
               </div>
             </div>
           )}
-
-        </div>
+          </>
+        )}</div>
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-obsidian-950 flex items-center justify-between">

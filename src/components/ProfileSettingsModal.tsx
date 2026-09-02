@@ -105,6 +105,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   const [healthConditions, setHealthConditions] = useState<HealthCondition[]>(profile.healthConditions || []);
   const [dailyStepGoal, setDailyStepGoal] = useState(profile.dailyStepGoal);
   const [dailyWaterGoalMl, setDailyWaterGoalMl] = useState(profile.dailyWaterGoalMl);
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(profile.workoutDaysPerWeek || 4);
   const [soundEnabled, setSoundEnabled] = useState(profile.soundEnabled);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -146,6 +147,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
       healthConditions,
       dailyStepGoal,
       dailyWaterGoalMl,
+      workoutDaysPerWeek,
       bmr: liveBmr,
       tdee: liveTdee,
       calorieTarget: liveCalorieTarget,
@@ -448,6 +450,28 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
                   EFSA standard: 35ml/kg for {weightKg}kg = {liveHydration.baselineMl}ml base + adjustments
+                </span>
+              </div>
+
+              <div className="col-span-1 sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                  Weekly Exercise Target ({workoutDaysPerWeek} Days / Week)
+                </label>
+                <select
+                  value={workoutDaysPerWeek}
+                  onChange={(e) => setWorkoutDaysPerWeek(Number(e.target.value))}
+                  className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                >
+                  <option value={1}>1 Day / Week (Full Body Maintenance)</option>
+                  <option value={2}>2 Days / Week (Full Body Split)</option>
+                  <option value={3}>3 Days / Week (Push / Pull / Legs Split)</option>
+                  <option value={4}>4 Days / Week (Upper / Lower Periodized Split)</option>
+                  <option value={5}>5 Days / Week (Push / Pull / Legs / Upper / Lower)</option>
+                  <option value={6}>6 Days / Week (High Performance PPL × 2)</option>
+                  <option value={7}>7 Days / Week (Athletic + Active Recovery)</option>
+                </select>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Determines your customized AI weekly exercise schedule and recovery distribution
                 </span>
               </div>
             </div>

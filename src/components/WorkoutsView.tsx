@@ -3,24 +3,32 @@ import { Dumbbell, Plus, Trash2, Heart, Clock, Flame, MapPin, Play, Timer, Spark
 import { WorkoutLog, DailyActivityLog, UserProfile } from '../types';
 import { ActivityRings } from './ActivityRings';
 import { StepTrackerCard } from './StepTrackerCard';
+import { AIWorkoutEstimatorCard } from './AIWorkoutEstimatorCard';
+import { WeeklyWorkoutPlannerCard } from './WeeklyWorkoutPlannerCard';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 
 interface WorkoutsViewProps {
   workouts: WorkoutLog[];
   activity: DailyActivityLog;
   profile: UserProfile;
+  selectedDate?: string;
   onOpenWorkoutModal: () => void;
   onDeleteWorkout: (id: string) => void;
   onActivityUpdated: (act: DailyActivityLog) => void;
+  onProfileUpdated?: (updated: UserProfile) => void;
+  onWorkoutLogged?: (workout: WorkoutLog) => void;
 }
 
 export const WorkoutsView: React.FC<WorkoutsViewProps> = ({
   workouts,
   activity,
   profile,
+  selectedDate,
   onOpenWorkoutModal,
   onDeleteWorkout,
   onActivityUpdated,
+  onProfileUpdated,
+  onWorkoutLogged,
 }) => {
   const totalWorkoutMinutes = workouts.reduce((s, w) => s + w.durationMinutes, 0);
   const totalWorkoutCalories = workouts.reduce((s, w) => s + w.caloriesBurned, 0);
@@ -88,6 +96,25 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* 1. Weekly Workout Schedule & AI Routine Planner */}
+      <WeeklyWorkoutPlannerCard
+        profile={profile}
+        selectedDate={selectedDate || activity.date}
+        activity={activity}
+        onProfileUpdated={onProfileUpdated}
+        onWorkoutLogged={onWorkoutLogged}
+        onActivityUpdated={onActivityUpdated}
+      />
+
+      {/* 2. AI Natural Language Workout Calorie Estimator */}
+      <AIWorkoutEstimatorCard
+        profile={profile}
+        selectedDate={selectedDate || activity.date}
+        activity={activity}
+        onWorkoutLogged={onWorkoutLogged}
+        onActivityUpdated={onActivityUpdated}
+      />
 
       {/* Activity Rings & Summary Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

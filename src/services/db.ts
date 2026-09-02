@@ -271,7 +271,8 @@ export function createDefaultUserProfile(userId: string, email: string, name: st
     targetWeightKg: 68,
     activityLevel: 'moderate' as const,
     fitnessGoal: 'maintain' as const,
-    healthConditions: []
+    healthConditions: [],
+    workoutDaysPerWeek: 4
   };
   const goals = calculateComprehensiveHealthGoals(baseProfile as unknown as UserProfile);
 

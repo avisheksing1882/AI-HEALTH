@@ -27,6 +27,7 @@ import {
   deleteDoc,
   writeBatch,
   query,
+  onSnapshot,
   Timestamp
 } from 'firebase/firestore';
 import { firestore } from './firebase';
@@ -449,4 +450,130 @@ async function mergeCollection<T extends Record<string, any>>(
   if (localOnly.length > 0) {
     pushToCloud(localOnly);
   }
+}
+
+// ==========================================
+// ⚡ LIVE REAL-TIME FIRESTORE LISTENERS
+// ==========================================
+
+export interface RealtimeSyncHandlers {
+  onProfileChange?: (profile: UserProfile) => void;
+  onMealsChange?: (meals: MealLog[]) => void;
+  onActivityChange?: (activities: DailyActivityLog[]) => void;
+  onWorkoutsChange?: (workouts: WorkoutLog[]) => void;
+  onWeightChange?: (weights: WeightLog[]) => void;
+  onWaterChange?: (water: WaterLog[]) => void;
+  onMedicationsChange?: (meds: Medication[]) => void;
+}
+
+/**
+ * ⚡ Live Real-Time Firestore Synchronization
+ * Establishes real-time WebSocket listeners using Firestore onSnapshot.
+ * Any updates on any device or in the database trigger immediately (sub-second)
+ * without polling or waiting intervals.
+ */
+export function subscribeToUserRealtimeSync(
+  userId: string,
+  handlers?: RealtimeSyncHandlers
+): () => void {
+  if (!syncEnabled || !userId) return () => {};
+
+  console.log(`[Firestore Realtime] 🟢 Live real-time stream connected for user: ${userId}`);
+  const unsubscribers: (() => void)[] = [];
+
+  try {
+    // 1. Live User Profile stream
+    const profileRef = doc(firestore, 'users', userId, 'profile', 'data');
+    const unsubProfile = onSnapshot(profileRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        delete data._syncedAt;
+        handlers?.onProfileChange?.(data as UserProfile);
+      }
+    }, (err) => console.warn('[Firestore Realtime] Profile stream error:', err));
+    unsubscribers.push(unsubProfile);
+
+    // 2. Live Meals stream
+    const mealsCol = collection(firestore, 'users', userId, 'meals');
+    const unsubMeals = onSnapshot(mealsCol, (snap) => {
+      const meals = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as MealLog;
+      });
+      handlers?.onMealsChange?.(meals);
+    }, (err) => console.warn('[Firestore Realtime] Meals stream error:', err));
+    unsubscribers.push(unsubMeals);
+
+    // 3. Live Daily Activity stream
+    const actCol = collection(firestore, 'users', userId, 'dailyActivity');
+    const unsubAct = onSnapshot(actCol, (snap) => {
+      const activities = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as DailyActivityLog;
+      });
+      handlers?.onActivityChange?.(activities);
+    }, (err) => console.warn('[Firestore Realtime] Activity stream error:', err));
+    unsubscribers.push(unsubAct);
+
+    // 4. Live Workouts stream
+    const workoutsCol = collection(firestore, 'users', userId, 'workouts');
+    const unsubWorkouts = onSnapshot(workoutsCol, (snap) => {
+      const workouts = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as WorkoutLog;
+      });
+      handlers?.onWorkoutsChange?.(workouts);
+    }, (err) => console.warn('[Firestore Realtime] Workouts stream error:', err));
+    unsubscribers.push(unsubWorkouts);
+
+    // 5. Live Weight Logs stream
+    const weightCol = collection(firestore, 'users', userId, 'weightLogs');
+    const unsubWeight = onSnapshot(weightCol, (snap) => {
+      const weights = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as WeightLog;
+      });
+      handlers?.onWeightChange?.(weights);
+    }, (err) => console.warn('[Firestore Realtime] Weight stream error:', err));
+    unsubscribers.push(unsubWeight);
+
+    // 6. Live Water Logs stream
+    const waterCol = collection(firestore, 'users', userId, 'waterLogs');
+    const unsubWater = onSnapshot(waterCol, (snap) => {
+      const water = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as WaterLog;
+      });
+      handlers?.onWaterChange?.(water);
+    }, (err) => console.warn('[Firestore Realtime] Water stream error:', err));
+    unsubscribers.push(unsubWater);
+
+    // 7. Live Medications stream
+    const medsCol = collection(firestore, 'users', userId, 'medications');
+    const unsubMeds = onSnapshot(medsCol, (snap) => {
+      const meds = snap.docs.map(d => {
+        const data = d.data();
+        delete data._syncedAt;
+        return data as Medication;
+      });
+      handlers?.onMedicationsChange?.(meds);
+    }, (err) => console.warn('[Firestore Realtime] Medications stream error:', err));
+    unsubscribers.push(unsubMeds);
+
+  } catch (err) {
+    console.warn('[Firestore Realtime] Error initializing real-time subscriptions:', err);
+  }
+
+  // Cleanup: unsubscribe all listeners
+  return () => {
+    console.log(`[Firestore Realtime] 🔴 Detaching live listeners for user: ${userId}`);
+    unsubscribers.forEach(unsub => {
+      try { unsub(); } catch { /* ignore */ }
+    });
+  };
 }

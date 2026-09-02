@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   UserProfile, 
@@ -29,6 +29,7 @@ import { notificationService } from './services/notificationService';
 import { generateNutritionInsights } from './services/nutritionCalculator';
 import { soundFx } from './services/soundEffects';
 import { authService } from './services/authService';
+import { subscribeToUserRealtimeSync } from './services/firestoreSync';
 
 // Auth Screen
 import { AuthScreen } from './components/AuthScreen';
@@ -132,31 +133,55 @@ export function App() {
     return () => notifsUnsub();
   }, [profile?.id]);
 
-  // ☁️ Automatic background Firestore sync: runs continuously without asking the user
+  // Keep ref to selectedDate so real-time listeners don't need to re-subscribe on date change
+  const selectedDateRef = useRef(selectedDate);
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
+  // ⚡ Live Real-Time Firestore Synchronization (Instant WebSocket push, ZERO polling wait)
   useEffect(() => {
     if (!profile) return;
 
-    // Initial background sync
+    // Initial background sync to align local and cloud
     authService.triggerCloudSync(profile.id, profile);
 
-    // Periodic automatic background sync every 30 seconds
-    const syncInterval = setInterval(() => {
-      authService.triggerCloudSync(profile.id, profile);
-    }, 30000);
-
-    // Automatic sync whenever the user returns to the tab
-    const handleActive = () => {
-      if (document.visibilityState === 'visible') {
-        authService.triggerCloudSync(profile.id, profile);
+    // Subscribe to live real-time changes across all collections
+    const unsubscribe = subscribeToUserRealtimeSync(profile.id, {
+      onProfileChange: (cloudProfile) => {
+        setProfile(cloudProfile);
+        db.userProfile.put(cloudProfile);
+      },
+      onMealsChange: async (cloudMeals) => {
+        await db.meals.bulkPut(cloudMeals);
+        const dayMeals = cloudMeals.filter(m => m.date === selectedDateRef.current);
+        setMeals(dayMeals);
+      },
+      onActivityChange: async (cloudActivities) => {
+        await db.dailyActivity.bulkPut(cloudActivities);
+        const dayAct = cloudActivities.find(a => a.date === selectedDateRef.current);
+        if (dayAct) {
+          setActivity(dayAct);
+        }
+      },
+      onWorkoutsChange: async (cloudWorkouts) => {
+        await db.workouts.bulkPut(cloudWorkouts);
+        const dayWorkouts = cloudWorkouts.filter(w => w.date === selectedDateRef.current);
+        setWorkouts(dayWorkouts);
+      },
+      onWeightChange: async (cloudWeights) => {
+        await db.weightLogs.bulkPut(cloudWeights);
+      },
+      onWaterChange: async (cloudWater) => {
+        await db.waterLogs.bulkPut(cloudWater);
+      },
+      onMedicationsChange: async (cloudMeds) => {
+        await db.medications.bulkPut(cloudMeds);
       }
-    };
-    document.addEventListener('visibilitychange', handleActive);
-    window.addEventListener('focus', handleActive);
+    });
 
     return () => {
-      clearInterval(syncInterval);
-      document.removeEventListener('visibilitychange', handleActive);
-      window.removeEventListener('focus', handleActive);
+      unsubscribe();
     };
   }, [profile?.id]);
 

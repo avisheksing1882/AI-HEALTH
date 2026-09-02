@@ -9,7 +9,8 @@ import {
   TrendingUp, 
   AlertCircle, 
   CheckCircle2, 
-  ChevronRight 
+  ChevronRight,
+  Share2 
 } from 'lucide-react';
 import { DailyActivityLog, MealLog, NutritionInsight, UserProfile, WorkoutLog, WeightLog } from '../types';
 import { db } from '../services/db';
@@ -22,6 +23,7 @@ import { NutritionInsightsCard } from './NutritionInsightsCard';
 import { MealsTimeline } from './MealsTimeline';
 import { MedicationsCard } from './MedicationsCard';
 import { HealthGoalsCard } from './HealthGoalsCard';
+import { WeeklyShareModal } from './WeeklyShareModal';
 import { soundFx } from '../services/soundEffects';
 
 interface DashboardProps {
@@ -60,6 +62,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onDeleteMeal,
 }) => {
   const [weeklyWeightAnalysis, setWeeklyWeightAnalysis] = useState<WeeklyWeightAnalysis | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareActivities, setShareActivities] = useState<DailyActivityLog[]>([]);
+  const [shareWeights, setShareWeights] = useState<WeightLog[]>([]);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -70,13 +75,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   useEffect(() => {
-    async function loadWeightData() {
+    async function loadWeeklyData() {
       const logs = await db.weightLogs.where('userId').equals(profile.id).sortBy('date');
       const analysis = calculateWeeklyWeightAnalysis(logs, profile.weightKg, profile.targetWeightKg);
       setWeeklyWeightAnalysis(analysis);
+      setShareWeights(logs);
+
+      const acts = await db.dailyActivity.where('userId').equals(profile.id).sortBy('date');
+      setShareActivities(acts);
     }
-    loadWeightData();
-  }, [profile.id, profile.weightKg, profile.targetWeightKg]);
+    loadWeeklyData();
+  }, [profile.id, profile.weightKg, profile.targetWeightKg, activity]);
 
   const hasAnyActivity = activity.steps > 0 || activity.activeCaloriesBurned > 0 || (activity.waterMl || 0) > 0 || meals.length > 0;
 
@@ -134,6 +143,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
             title="Log Weight"
           >
             <Scale className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => { soundFx.playTap(); setIsShareModalOpen(true); }}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-emerald-500/20 transition active:scale-95 shadow-sm"
+            title="Share Weekly Status on WhatsApp (1080x1920 JPEG)"
+          >
+            <Share2 className="w-4 h-4 text-emerald-500" />
+            <span className="hidden md:inline">Share Status</span>
           </button>
         </div>
       </div>
@@ -293,6 +311,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
       </div>
+
+      {/* Futuristic WhatsApp Status Share Modal */}
+      <WeeklyShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        profile={profile}
+        activities={shareActivities}
+        meals={meals}
+        workouts={workouts}
+        weights={shareWeights}
+      />
 
     </div>
   );

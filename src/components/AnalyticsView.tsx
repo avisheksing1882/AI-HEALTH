@@ -14,11 +14,12 @@ import {
   ReferenceLine,
   Legend
 } from 'recharts';
-import { TrendingUp, Flame, Footprints, Award, Scale, Calendar, Utensils } from 'lucide-react';
+import { TrendingUp, Flame, Footprints, Award, Scale, Calendar, Utensils, Share2 } from 'lucide-react';
 import { DailyActivityLog, MealLog, UserProfile, WeightLog, WorkoutLog } from '../types';
 import { db } from '../services/db';
 import { calculateWeeklyWeightAnalysis } from '../services/nutritionCalculator';
 import { soundFx } from '../services/soundEffects';
+import { WeeklyShareModal } from './WeeklyShareModal';
 
 interface AnalyticsViewProps {
   profile: UserProfile;
@@ -31,6 +32,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ profile }) => {
   const [weights, setWeights] = useState<WeightLog[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -117,21 +119,36 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ profile }) => {
           </p>
         </div>
 
-        {/* Time Range Filter Pills */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-obsidian-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold self-start sm:self-auto">
-          {(['7d', '30d', '90d'] as const).map(range => (
-            <button
-              key={range}
-              onClick={() => { soundFx.playTap(); setTimeRange(range); }}
-              className={`px-3.5 py-1.5 rounded-xl transition ${
-                timeRange === range
-                  ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
-            </button>
-          ))}
+        {/* Action Controls: Share Weekly Status & Time Range Filter */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => { soundFx.playTap(); setIsShareModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/25 transition transform active:scale-95 shrink-0"
+            title="Export 1080x1920 Futuristic JPEG for WhatsApp Status"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Share Weekly Status</span>
+            <span className="px-1.5 py-0.5 bg-white/20 rounded-md text-[9px] uppercase font-mono font-bold tracking-wider">
+              JPEG
+            </span>
+          </button>
+
+          {/* Time Range Filter Pills */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-obsidian-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+            {(['7d', '30d', '90d'] as const).map(range => (
+              <button
+                key={range}
+                onClick={() => { soundFx.playTap(); setTimeRange(range); }}
+                className={`px-3.5 py-1.5 rounded-xl transition ${
+                  timeRange === range
+                    ? 'bg-white dark:bg-obsidian-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -414,6 +431,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ profile }) => {
           ))}
         </div>
       )}
+
+      {/* Futuristic WhatsApp Status Share Modal */}
+      <WeeklyShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        profile={profile}
+        activities={activities}
+        meals={meals}
+        workouts={workouts}
+        weights={weights}
+      />
 
     </div>
   );

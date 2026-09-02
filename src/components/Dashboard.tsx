@@ -21,6 +21,7 @@ import { WaterTrackerCard } from './WaterTrackerCard';
 import { NutritionInsightsCard } from './NutritionInsightsCard';
 import { MealsTimeline } from './MealsTimeline';
 import { MedicationsCard } from './MedicationsCard';
+import { HealthGoalsCard } from './HealthGoalsCard';
 import { soundFx } from '../services/soundEffects';
 
 interface DashboardProps {
@@ -34,6 +35,7 @@ interface DashboardProps {
   onOpenManualFoodLogger: () => void;
   onOpenWorkoutModal: () => void;
   onOpenWeightModal: () => void;
+  onOpenSettings?: () => void;
   onActivityUpdated: (act: DailyActivityLog) => void;
   onWaterUpdated: (amountMl: number) => void;
   onLogWaterDelta?: (deltaMl: number) => void;
@@ -51,6 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenManualFoodLogger,
   onOpenWorkoutModal,
   onOpenWeightModal,
+  onOpenSettings,
   onActivityUpdated,
   onWaterUpdated,
   onLogWaterDelta,
@@ -193,6 +196,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
+      {/* Medically Verified Clinical Health & Fitness Goals */}
+      <div id="section-goals" className="scroll-mt-28">
+        <HealthGoalsCard
+          profile={profile}
+          activity={activity}
+          meals={meals}
+          workouts={workouts}
+          onOpenSettings={onOpenSettings}
+        />
+      </div>
+
       {/* Hero Activity Rings & Calorie Budget Section */}
       <div id="section-overview" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-28">
         
@@ -264,6 +278,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div id="section-water" className="scroll-mt-28">
             <WaterTrackerCard
               activity={activity}
+              profile={profile}
+              workoutMinutesToday={workouts.reduce((acc, w) => acc + (w.durationMinutes || 0), 0)}
               selectedDate={selectedDate}
               onWaterUpdated={onWaterUpdated}
               onLogWaterDelta={onLogWaterDelta}

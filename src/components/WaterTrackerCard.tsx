@@ -12,12 +12,15 @@ import {
   History,
   X
 } from 'lucide-react';
-import { DailyActivityLog, WaterLog } from '../types';
+import { DailyActivityLog, WaterLog, UserProfile } from '../types';
 import { db } from '../services/db';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { calculateMedicallyAccurateHydration } from '../services/nutritionCalculator';
 
 interface WaterTrackerCardProps {
   activity: DailyActivityLog;
+  profile?: UserProfile;
+  workoutMinutesToday?: number;
   selectedDate?: string;
   onWaterUpdated: (newAmountMl: number) => void;
   onLogWaterDelta?: (deltaMl: number) => void;
@@ -25,6 +28,8 @@ interface WaterTrackerCardProps {
 
 export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
   activity,
+  profile,
+  workoutMinutesToday = 0,
   selectedDate,
   onWaterUpdated,
   onLogWaterDelta,
@@ -43,8 +48,20 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
+  // Dynamically calculate individualized clinical hydration recommendation
+  const clinicalHydration = profile ? calculateMedicallyAccurateHydration(
+    profile.weightKg,
+    profile.gender,
+    profile.age,
+    profile.activityLevel,
+    workoutMinutesToday,
+    profile.healthConditions
+  ) : null;
+
   const currentMl = Math.max(0, activity.waterMl || 0);
-  const goalMl = Math.max(1000, activity.waterGoalMl || 3000);
+  const goalMl = clinicalHydration 
+    ? clinicalHydration.totalRecommendedMl 
+    : Math.max(1000, activity.waterGoalMl || 2500);
   const pct = Math.min(100, Math.round((currentMl / goalMl) * 100));
 
   // Load today's water logs from IndexedDB
@@ -135,8 +152,13 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Daily Target: {(goalMl / 1000).toFixed(1)}L ({goalMl}ml)
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span>Daily Target: {(goalMl / 1000).toFixed(1)}L ({goalMl}ml)</span>
+                {clinicalHydration && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                    Clinical EFSA Standard
+                  </span>
+                )}
               </p>
             </div>
           </div>

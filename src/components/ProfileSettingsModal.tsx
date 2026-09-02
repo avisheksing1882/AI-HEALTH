@@ -17,7 +17,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { ActivityLevel, FitnessGoal, Gender, UserProfile, HealthCondition } from '../types';
-import { calculateBMR, calculateCalorieTarget, calculateMacroTargets, calculateTDEE } from '../services/nutritionCalculator';
+import { calculateBMR, calculateCalorieTarget, calculateMacroTargets, calculateTDEE, calculateMedicallyAccurateHydration } from '../services/nutritionCalculator';
 import { db, saveUserProfile } from '../services/db';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 
@@ -115,6 +115,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   const liveTdee = calculateTDEE(liveBmr, activityLevel);
   const liveCalorieTarget = calculateCalorieTarget(liveTdee, fitnessGoal, gender);
   const liveMacros = calculateMacroTargets(liveCalorieTarget, weightKg, fitnessGoal, healthConditions);
+  const liveHydration = calculateMedicallyAccurateHydration(weightKg, gender, age, activityLevel, 0, healthConditions);
 
   const toggleHealthCondition = (condId: HealthCondition) => {
     soundFx.playTap();
@@ -425,17 +426,29 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Daily Hydration Target (ml)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">Daily Hydration Target (ml)</label>
+                  <button
+                    type="button"
+                    onClick={() => setDailyWaterGoalMl(liveHydration.totalRecommendedMl)}
+                    className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold hover:underline"
+                  >
+                    Use Recommended ({liveHydration.totalRecommendedMl}ml)
+                  </button>
+                </div>
                 <input
                   type="number"
-                  step="250"
+                  step="50"
                   value={dailyWaterGoalMl}
-                  min={500}
-                  max={8000}
+                  min={1000}
+                  max={6000}
                   onChange={(e) => setDailyWaterGoalMl(Number(e.target.value))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  EFSA standard: 35ml/kg for {weightKg}kg = {liveHydration.baselineMl}ml base + adjustments
+                </span>
               </div>
             </div>
           </div>
@@ -448,22 +461,26 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                 Personalized Clinical Targets Calculated
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center pt-1">
               <div className="p-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-500 block">Daily Budget</span>
                 <span className="text-sm font-black text-slate-900 dark:text-white">{liveCalorieTarget} kcal</span>
               </div>
               <div className="p-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-500 block">Protein Goal</span>
+                <span className="text-[10px] text-slate-500 block">Protein</span>
                 <span className="text-sm font-black text-emerald-500">{liveMacros.proteinGramsTarget}g</span>
               </div>
               <div className="p-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-500 block">Carbs Target</span>
+                <span className="text-[10px] text-slate-500 block">Carbs</span>
                 <span className="text-sm font-black text-amber-500">{liveMacros.carbsGramsTarget}g</span>
               </div>
               <div className="p-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-500 block">Healthy Fats</span>
                 <span className="text-sm font-black text-cyan-500">{liveMacros.fatGramsTarget}g</span>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-slate-500 block">Hydration</span>
+                <span className="text-sm font-black text-blue-500">{liveHydration.totalRecommendedMl} ml</span>
               </div>
             </div>
           </div>

@@ -457,6 +457,7 @@ export function App() {
                 onOpenManualFoodLogger={() => setIsManualFoodOpen(true)}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}
                 onOpenWeightModal={() => setIsWeightModalOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
                 onActivityUpdated={handleActivityUpdated}
                 onWaterUpdated={handleWaterUpdated}
                 onLogWaterDelta={handleLogWaterDelta}

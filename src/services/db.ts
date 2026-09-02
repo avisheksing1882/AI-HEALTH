@@ -28,6 +28,10 @@ import {
   syncMedicationLogToCloud,
   syncNotificationRuleToCloud
 } from './firestoreSync';
+import { 
+  calculateComprehensiveHealthGoals, 
+  calculateMedicallyAccurateHydration 
+} from './nutritionCalculator';
 
 // ==========================================
 // 🛡️ DUAL-LAYER STORAGE: LOCALSTORAGE BACKUP & CACHE
@@ -255,30 +259,35 @@ export async function syncUserDataWithCache(userId: string): Promise<void> {
  */
 export function createDefaultUserProfile(userId: string, email: string, name: string, avatarUrl?: string): UserProfile {
   const cleanName = name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const profile: UserProfile = {
+  const baseProfile = {
     id: userId,
     email: email.toLowerCase().trim(),
     name: cleanName,
     avatarUrl,
     age: 28,
-    gender: 'male',
+    gender: 'male' as const,
     heightCm: 175,
     weightKg: 70,
     targetWeightKg: 68,
-    activityLevel: 'moderate',
-    fitnessGoal: 'maintain',
-    healthConditions: [],
-    dailyStepGoal: 10000,
-    dailyActiveCalorieGoal: 500,
-    dailyExerciseMinutesGoal: 45,
-    dailyWaterGoalMl: 3000,
-    bmr: 1680,
-    tdee: 2350,
-    calorieTarget: 2350,
-    proteinGramsTarget: 140,
-    carbsGramsTarget: 260,
-    fatGramsTarget: 65,
-    fiberGramsTarget: 30,
+    activityLevel: 'moderate' as const,
+    fitnessGoal: 'maintain' as const,
+    healthConditions: []
+  };
+  const goals = calculateComprehensiveHealthGoals(baseProfile as unknown as UserProfile);
+
+  const profile: UserProfile = {
+    ...baseProfile,
+    dailyStepGoal: goals.activityGoals.dailyStepGoal,
+    dailyActiveCalorieGoal: goals.activityGoals.dailyActiveCalorieGoal,
+    dailyExerciseMinutesGoal: goals.activityGoals.dailyExerciseMinutesGoal,
+    dailyWaterGoalMl: goals.hydration.totalRecommendedMl,
+    bmr: goals.bmr,
+    tdee: goals.tdee,
+    calorieTarget: goals.calorieTarget,
+    proteinGramsTarget: goals.macroTargets.proteinGramsTarget,
+    carbsGramsTarget: goals.macroTargets.carbsGramsTarget,
+    fatGramsTarget: goals.macroTargets.fatGramsTarget,
+    fiberGramsTarget: goals.macroTargets.fiberGramsTarget,
     useFallbackAi: true,
     theme: 'dark',
     soundEnabled: true,
@@ -419,8 +428,38 @@ export async function saveUserProfile(userId: string, changes: Partial<UserProfi
   if (!current) {
     throw new Error(`User profile not found for userId: ${userId}`);
   }
+
+  // If physiological or goal attributes change, automatically recompute verified clinical targets
+  let dynamicClinicalGoals: Partial<UserProfile> = {};
+  if (
+    changes.weightKg !== undefined ||
+    changes.heightCm !== undefined ||
+    changes.age !== undefined ||
+    changes.gender !== undefined ||
+    changes.activityLevel !== undefined ||
+    changes.fitnessGoal !== undefined ||
+    changes.healthConditions !== undefined
+  ) {
+    const candidateProfile = { ...current, ...changes };
+    const goals = calculateComprehensiveHealthGoals(candidateProfile);
+    dynamicClinicalGoals = {
+      bmr: goals.bmr,
+      tdee: goals.tdee,
+      calorieTarget: changes.calorieTarget ?? goals.calorieTarget,
+      dailyWaterGoalMl: changes.dailyWaterGoalMl ?? goals.hydration.totalRecommendedMl,
+      proteinGramsTarget: changes.proteinGramsTarget ?? goals.macroTargets.proteinGramsTarget,
+      carbsGramsTarget: changes.carbsGramsTarget ?? goals.macroTargets.carbsGramsTarget,
+      fatGramsTarget: changes.fatGramsTarget ?? goals.macroTargets.fatGramsTarget,
+      fiberGramsTarget: changes.fiberGramsTarget ?? goals.macroTargets.fiberGramsTarget,
+      dailyStepGoal: changes.dailyStepGoal ?? goals.activityGoals.dailyStepGoal,
+      dailyActiveCalorieGoal: changes.dailyActiveCalorieGoal ?? goals.activityGoals.dailyActiveCalorieGoal,
+      dailyExerciseMinutesGoal: changes.dailyExerciseMinutesGoal ?? goals.activityGoals.dailyExerciseMinutesGoal,
+    };
+  }
+
   const updated: UserProfile = {
     ...current,
+    ...dynamicClinicalGoals,
     ...changes,
     updatedAt: new Date().toISOString()
   };
@@ -457,10 +496,15 @@ export async function getOrCreateDailyActivity(userId: string, date: string, pro
   
   if (!log) {
     const user = profile || await getUserProfile(userId);
-    const bmr = user ? user.bmr : 1400;
+    const weightKg = user ? user.weightKg : 70;
+    const gender = user ? user.gender : 'male';
+    const age = user ? user.age : 28;
+    const activityLevel = user ? user.activityLevel : 'moderate';
+    const bmr = user ? user.bmr : 1600;
     const stepGoal = user ? user.dailyStepGoal : 10000;
-    const waterGoal = user ? user.dailyWaterGoalMl : 3000;
-    const weightKg = user ? user.weightKg : 62;
+    const waterGoal = user && user.dailyWaterGoalMl 
+      ? user.dailyWaterGoalMl 
+      : calculateMedicallyAccurateHydration(weightKg, gender, age, activityLevel, 0, user?.healthConditions).totalRecommendedMl;
 
     log = {
       id: activityId,

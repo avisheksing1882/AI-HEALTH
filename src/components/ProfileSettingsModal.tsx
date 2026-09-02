@@ -13,8 +13,7 @@ import {
   Trash2,
   LogOut,
   Mail,
-  HeartPulse,
-  Cloud
+  HeartPulse
 } from 'lucide-react';
 import { ActivityLevel, FitnessGoal, Gender, UserProfile, HealthCondition } from '../types';
 import { calculateBMR, calculateCalorieTarget, calculateMacroTargets, calculateTDEE, calculateMedicallyAccurateHydration } from '../services/nutritionCalculator';
@@ -535,27 +534,6 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
             >
               {soundEnabled ? 'Enabled' : 'Muted'}
             </button>
-          </div>
-
-          {/* Automatic Cloud Sync Status (No Manual Action Required) */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                <Cloud className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  Automatic Cloud Database Sync
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Live & Auto-Syncing
-                  </span>
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                  All meals, workouts, water, weight, medications, and steps automatically upload and sync in real time.
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Account Actions & Data Management */}

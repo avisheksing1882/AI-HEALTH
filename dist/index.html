@@ -2,30 +2,191 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/assets/vital-track-logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>VitalTrack AI — AI Food Scanner, Calorie Counter &amp; Step Pedometer</title>
+    <meta name="title" content="VitalTrack AI — AI Food Scanner, Calorie Counter &amp; Step Pedometer" />
+    <meta name="description" content="Track health effortlessly with VitalTrack AI: Instant AI food plate recognition, macro &amp; calorie counter, real-time step pedometer, and personalized wellness goals." />
+    <meta name="keywords" content="AI fitness tracker, AI food scanner, calorie counter, photo food tracker, step pedometer, macro tracker, Indian food calorie tracker, fitness progress, TDEE calculator" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://ai-health-fitness-tracker.vercel.app/" />
+    
+    <!-- Mobile & Viewport Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0B0F17" />
-    <meta name="description" content="AI-Powered Health & Fitness Tracker - Activity, Step Pedometer, AI Food Lens & Calorie Tracker" />
-    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>VitalTrack AI • Health & Fitness Tracker</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <meta name="apple-mobile-web-app-title" content="VitalTrack AI" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/assets/vital-track-logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VitalTrack AI" />
+    <meta property="og:url" content="https://ai-health-fitness-tracker.vercel.app/" />
+    <meta property="og:title" content="VitalTrack AI — Smart AI Food Scanner &amp; Health Tracker" />
+    <meta property="og:description" content="Scan plates to calories &amp; macros, track live steps, and monitor daily wellness with precision AI analytics." />
+    <meta property="og:image" content="https://ai-health-fitness-tracker.vercel.app/assets/og-preview.png" />
+    <meta property="og:image:secure_url" content="https://ai-health-fitness-tracker.vercel.app/assets/og-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VitalTrack AI - Smart Health &amp; Food Recognition Platform" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://ai-health-fitness-tracker.vercel.app/" />
+    <meta name="twitter:title" content="VitalTrack AI — AI Food Scanner &amp; Health Tracker" />
+    <meta name="twitter:description" content="Instant plate recognition, macro breakdown, live step pedometer, and private wellness tracking linked to your Google account." />
+    <meta name="twitter:image" content="https://ai-health-fitness-tracker.vercel.app/assets/og-preview.png" />
+    <meta name="twitter:image:alt" content="VitalTrack AI - Health &amp; Fitness Application" />
+
+    <!-- Structured Data (Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://ai-health-fitness-tracker.vercel.app/#website",
+          "url": "https://ai-health-fitness-tracker.vercel.app/",
+          "name": "VitalTrack AI",
+          "description": "AI-Powered Health & Fitness Tracker - Activity, Step Pedometer, AI Food Lens & Calorie Tracker",
+          "publisher": {
+            "@id": "https://ai-health-fitness-tracker.vercel.app/#organization"
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://ai-health-fitness-tracker.vercel.app/#organization",
+          "name": "VitalTrack AI",
+          "url": "https://ai-health-fitness-tracker.vercel.app/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://ai-health-fitness-tracker.vercel.app/assets/vital-track-logo.svg",
+            "width": 512,
+            "height": 512
+          }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://ai-health-fitness-tracker.vercel.app/#webapp",
+          "name": "VitalTrack AI Health & Fitness Tracker",
+          "url": "https://ai-health-fitness-tracker.vercel.app/",
+          "applicationCategory": "HealthApplication, FitnessApplication",
+          "operatingSystem": "All modern web browsers, Android, iOS (Progressive Web App)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Instant AI food plate photo scanning and automated calorie breakdown",
+            "Clinical macronutrient analysis (protein, carbohydrates, fats, fiber, sodium, sugar)",
+            "Hardware-accelerated live step counter and distance pedometer",
+            "Adaptive metabolic calculations using the Mifflin-St Jeor TDEE formula",
+            "Private Google authentication with partitioned Cloud Firestore synchronization"
+          ],
+          "screenshot": "https://ai-health-fitness-tracker.vercel.app/assets/og-preview.png"
+        },
+        {
+          "@type": "MedicalWebPage",
+          "@id": "https://ai-health-fitness-tracker.vercel.app/#medical",
+          "url": "https://ai-health-fitness-tracker.vercel.app/",
+          "name": "VitalTrack AI Health & Nutrition Tracking",
+          "aspect": "Health and Fitness Self-Monitoring",
+          "audience": {
+            "@type": "PeopleAudience",
+            "suggestedGender": "unisex"
+          },
+          "disclaimer": "VitalTrack AI is designed exclusively for educational, general wellness, and nutritional awareness purposes. The dietary calculations, calorie estimates, and AI recommendations do not constitute professional medical diagnosis, treatment, or personalized medical nutrition therapy."
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://ai-health-fitness-tracker.vercel.app/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How does VitalTrack AI recognize food and estimate calories?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "VitalTrack AI utilizes computer vision and generative AI to detect individual food items on your plate. It cross-references recognized portions with validated nutritional tables from the ICMR-NIN Indian Food Composition Tables (IFCT 2017) and USDA FoodData Central to estimate calories, protein, carbohydrates, fats, and micronutrients."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How are daily calorie and macro goals calculated?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "VitalTrack AI computes your Basal Metabolic Rate (BMR) and Total Daily Energy Expenditure (TDEE) using the scientifically validated Mifflin-St Jeor equation, adjusting for age, gender, height, current weight, activity level, and health conditions."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is my health and meal data kept private?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. VitalTrack AI uses secure Google Identity Services for authentication. Your meal logs, step counts, and health records are strictly partitioned to your user ID in local IndexedDB storage and synced privately to Cloud Firestore."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does VitalTrack AI provide medical advice?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. VitalTrack AI provides wellness and nutrition self-monitoring tools. It is not a medical device and should not replace clinical diagnosis, treatment, or advice from a registered healthcare professional."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" crossorigin src="/assets/index-AWKYgeGU.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BwOxdFAi.css">
+    <script type="module" crossorigin src="/assets/index-C1NU5KUh.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Dqfdfwfk.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-db-BaJEyKV8.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-BdjAnVXY.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-VgHvx8HG.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-charts--4b7kkfu.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-DuClruiU.css">
   </head>
   <body class="bg-slate-50 dark:bg-obsidian-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased selection:bg-health-green/20 selection:text-health-green">
     <div id="root">
-      <!-- Pre-React loading indicator (replaced when React mounts) -->
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0B0F1A;">
-        <div style="width:48px;height:48px;border:4px solid rgba(16,185,129,0.2);border-top-color:#10B981;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-        <p style="color:#94A3B8;font-size:14px;margin-top:16px;font-family:system-ui">Loading VitalTrack AI…</p>
+      <!-- Pre-React crawlable semantic content (replaced once React mounts) -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0B0F1A;padding:24px;text-align:center;color:#F8FAFC;font-family:system-ui,-apple-system,sans-serif">
+        <div style="width:48px;height:48px;border:4px solid rgba(16,185,129,0.2);border-top-color:#10B981;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px"></div>
+        <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin:0 0 8px 0;background:linear-gradient(to right, #FFFFFF, #6EE7B7, #67E8F9);-webkit-background-clip:text;-webkit-text-fill-color:transparent">VitalTrack AI • Health &amp; Fitness Tracker</h1>
+        <p style="color:#94A3B8;font-size:14px;max-width:480px;line-height:1.5;margin:0">AI-powered food lens recognition, real-time step pedometer, clinical macro breakdown, and personal health goal tracking.</p>
       </div>
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     </div>
+
+    <!-- Fallback for non-JS web crawlers & accessible clients -->
+    <noscript>
+      <div style="padding:32px;background:#0B0F17;color:#E2E8F0;font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;line-height:1.6">
+        <h2>VitalTrack AI — Smart Health, Nutrition &amp; Fitness Tracker</h2>
+        <p>VitalTrack AI is an intelligent fitness and wellness application providing instant AI plate photo recognition, clinical macronutrient tracking, real-time step pedometer, and personalized metabolic insights linked securely to your Google account.</p>
+        <h3>Core Features:</h3>
+        <ul>
+          <li><strong>AI Food Lens:</strong> Snap photos of meals to identify food items, portion sizes, and calculate calories, protein, carbs, and fats based on ICMR-NIN &amp; USDA nutrition databases.</li>
+          <li><strong>Live Step Pedometer:</strong> Measure real-time steps, distance, active minutes, and calories burned with adaptive streak tracking.</li>
+          <li><strong>Metabolic Engine:</strong> Science-backed BMR &amp; TDEE target calculations powered by the Mifflin-St Jeor equation.</li>
+        </ul>
+        <p><em>Medical Disclaimer: VitalTrack AI is designed for general wellness and educational tracking only. It is not a substitute for clinical diagnosis or individualized medical advice.</em></p>
+      </div>
+    </noscript>
+
   </body>
 </html>

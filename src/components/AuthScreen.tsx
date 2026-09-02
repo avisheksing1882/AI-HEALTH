@@ -7,11 +7,13 @@ import {
   CheckCircle2, 
   Flame,
   UserCheck,
-  Zap
+  Zap,
+  HeartPulse
 } from 'lucide-react';
 import { AuthSession, UserProfile } from '../types';
 import { authService } from '../services/authService';
 import { soundFx } from '../services/soundEffects';
+import { LegalAndTrustModal, LegalTabType } from './LegalAndTrustModal';
 
 interface AuthScreenProps {
   onLoginSuccess: (session: AuthSession, profile: UserProfile) => void;
@@ -19,6 +21,14 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const googleBtnContainerRef = React.useRef<HTMLDivElement>(null);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<LegalTabType>('disclaimer');
+
+  const openLegalModal = (tab: LegalTabType) => {
+    soundFx.playTap();
+    setLegalInitialTab(tab);
+    setLegalModalOpen(true);
+  };
 
   React.useEffect(() => {
     // Initialize official Google Identity Services SDK
@@ -41,8 +51,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         <div className="flex items-center gap-3">
           <img 
             src="/assets/vital-track-logo.svg" 
-            alt="VitalTrack AI Logo" 
+            alt="VitalTrack AI - Smart Health &amp; Fitness Logo" 
             className="w-10 h-10 rounded-2xl shadow-lg shadow-orange-500/20 object-contain shrink-0" 
+            width={40}
+            height={40}
           />
           <div>
             <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
@@ -64,11 +76,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       <main className="relative z-10 max-w-5xl mx-auto w-full px-6 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-between gap-12 my-auto">
         
         {/* Left Hero Column */}
-        <div className="max-w-xl space-y-6 text-center lg:text-left">
+        <section className="max-w-xl space-y-6 text-center lg:text-left">
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Food Vision & Precision Activity Tracking</span>
+            <span>AI Food Vision &amp; Precision Activity Tracking</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
@@ -115,10 +127,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-        </div>
+          {/* YMYL Clinical Trust Banner */}
+          <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-obsidian-900/40 border border-slate-800/60 px-3.5 py-2.5 rounded-2xl text-left">
+            <HeartPulse className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="leading-snug">
+              <span>Formulated using Mifflin-St Jeor &amp; ICMR-NIN / USDA nutritional data. </span>
+              <button
+                type="button"
+                onClick={() => openLegalModal('disclaimer')}
+                className="text-emerald-400 hover:underline font-semibold"
+              >
+                Medical Disclaimer &rarr;
+              </button>
+            </div>
+          </div>
+
+        </section>
 
         {/* Right Sign In Card */}
-        <div className="w-full max-w-md bg-obsidian-900/90 backdrop-blur-xl border border-slate-800/80 p-6 sm:p-8 rounded-3xl shadow-2xl shadow-black/60 relative">
+        <section className="w-full max-w-md bg-obsidian-900/90 backdrop-blur-xl border border-slate-800/80 p-6 sm:p-8 rounded-3xl shadow-2xl shadow-black/60 relative">
           
           <div className="text-center space-y-2 mb-6">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center mb-2">
@@ -145,11 +172,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>Automatic profile & photo sync from Google</span>
+                <span>Automatic profile &amp; photo sync from Google</span>
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Private & isolated local health database</span>
+                <span>Private &amp; isolated local health database</span>
               </div>
             </div>
           </div>
@@ -162,14 +189,52 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </p>
           </div>
 
-        </div>
+        </section>
 
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 max-w-6xl mx-auto w-full px-6 py-6 text-center text-xs text-slate-500 border-t border-slate-900">
+      {/* Footer with YMYL Trust Links */}
+      <footer className="relative z-10 max-w-6xl mx-auto w-full px-6 py-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
         <p>VitalTrack AI • Private Health Tracking with 1-Tap Google Auth</p>
+
+        <div className="flex flex-wrap items-center justify-center gap-4 text-[11px]">
+          <button
+            type="button"
+            onClick={() => openLegalModal('disclaimer')}
+            className="hover:text-rose-400 transition underline underline-offset-4"
+          >
+            Medical Disclaimer
+          </button>
+          <button
+            type="button"
+            onClick={() => openLegalModal('about')}
+            className="hover:text-emerald-400 transition underline underline-offset-4"
+          >
+            Scientific Standards
+          </button>
+          <button
+            type="button"
+            onClick={() => openLegalModal('privacy')}
+            className="hover:text-cyan-400 transition underline underline-offset-4"
+          >
+            Privacy Policy
+          </button>
+          <button
+            type="button"
+            onClick={() => openLegalModal('terms')}
+            className="hover:text-indigo-400 transition underline underline-offset-4"
+          >
+            Terms of Service
+          </button>
+        </div>
       </footer>
+
+      {/* Interactive Legal, Medical & Trust Modal */}
+      <LegalAndTrustModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalInitialTab}
+      />
 
     </div>
   );

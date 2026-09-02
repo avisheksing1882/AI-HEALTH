@@ -1,0 +1,20 @@
+# VitalTrack AI - robots.txt
+# https://ai-health-fitness-tracker.vercel.app/
+
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /manifest.json
+Allow: /sitemap.xml
+Allow: /robots.txt
+
+# Disallow private user-specific endpoints and internal system paths
+Disallow: /api/
+Disallow: /_vercel/
+Disallow: /temp/
+
+# Crawl-delay for non-major bots to protect server resources
+Crawl-delay: 1
+
+# XML Sitemap Location
+Sitemap: https://ai-health-fitness-tracker.vercel.app/sitemap.xml

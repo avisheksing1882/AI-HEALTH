@@ -21,6 +21,7 @@ import { calculateBMR, calculateCalorieTarget, calculateMacroTargets, calculateT
 import { db, saveUserProfile } from '../services/db';
 import { clearAllUserDataFromCloud } from '../services/firestoreSync';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { LegalAndTrustModal, LegalTabType } from './LegalAndTrustModal';
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -110,6 +111,14 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   const [soundEnabled, setSoundEnabled] = useState(profile.soundEnabled);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<LegalTabType>('disclaimer');
+
+  const openLegalModal = (tab: LegalTabType) => {
+    soundFx.playTap();
+    setLegalInitialTab(tab);
+    setLegalModalOpen(true);
+  };
 
   // Sync state whenever modal opens or profile changes
   useEffect(() => {
@@ -602,6 +611,41 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
             </button>
           </div>
 
+          {/* Medical, Privacy & Scientific Transparency */}
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-slate-100/70 dark:bg-obsidian-950/70 border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Medical &amp; Science Transparency
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('disclaimer')}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 font-bold hover:bg-rose-500/20 transition"
+                >
+                  Disclaimer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('about')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold hover:bg-emerald-500/20 transition"
+                >
+                  Science
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('privacy')}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-500 font-bold hover:bg-cyan-500/20 transition"
+                >
+                  Privacy
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Account Actions & Data Management */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -722,6 +766,13 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Interactive Legal, Medical & Trust Modal */}
+      <LegalAndTrustModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalInitialTab}
+      />
     </div>
   );
 };

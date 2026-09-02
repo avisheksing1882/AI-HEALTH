@@ -106,6 +106,9 @@ export function App() {
 
           const streak = await pedometer.calculateStreak(user.id);
           setStreakCount(streak);
+
+          // ☁️ Trigger background Firestore cloud sync to ensure all local data is backed up
+          authService.triggerCloudSync(user.id, user);
         } else {
           // If session exists but profile was purged, clear session
           authService.logout();

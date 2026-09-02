@@ -13,12 +13,15 @@ import {
   Trash2,
   LogOut,
   Mail,
-  HeartPulse
+  HeartPulse,
+  Cloud,
+  RefreshCw
 } from 'lucide-react';
 import { ActivityLevel, FitnessGoal, Gender, UserProfile, HealthCondition } from '../types';
 import { calculateBMR, calculateCalorieTarget, calculateMacroTargets, calculateTDEE } from '../services/nutritionCalculator';
 import { db, saveUserProfile } from '../services/db';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
+import { authService } from '../services/authService';
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -106,6 +109,24 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   const [dailyWaterGoalMl, setDailyWaterGoalMl] = useState(profile.dailyWaterGoalMl);
   const [soundEnabled, setSoundEnabled] = useState(profile.soundEnabled);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncToCloud = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    soundFx.playTap();
+    try {
+      await authService.triggerCloudSync(profile.id, profile);
+      setSyncMessage('Cloud database updated successfully! ✅');
+      setTimeout(() => setSyncMessage(null), 4000);
+    } catch (err) {
+      setSyncMessage('Sync failed. Please check network connection.');
+      setTimeout(() => setSyncMessage(null), 4000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -484,6 +505,35 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
               }`}
             >
               {soundEnabled ? 'Enabled' : 'Muted'}
+            </button>
+          </div>
+
+          {/* Cloud Database Sync Status */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                <Cloud className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  Cloud Database Backup
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                    Connected
+                  </span>
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                  {syncMessage || 'Syncs all meals, workouts, water, weight & meds to Firebase Cloud Firestore'}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSyncToCloud}
+              disabled={isSyncing}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50 flex-shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Uploading...' : 'Sync to Cloud Now'}</span>
             </button>
           </div>
 

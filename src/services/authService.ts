@@ -306,48 +306,48 @@ class AuthService {
   }
 
   /**
-   * Triggers full Firestore cloud sync in the background (non-blocking)
+   * Triggers full Firestore cloud sync (bi-directional merge)
    */
-  private triggerCloudSync(userId: string, profile: UserProfile): void {
-    (async () => {
-      try {
-        // Gather all local data
-        const [meals, dailyActivities, workouts, weightLogs, waterLogs, medications, medicationLogs, notificationRules] = await Promise.all([
-          db.meals.where('userId').equals(userId).toArray(),
-          db.dailyActivity.where('userId').equals(userId).toArray(),
-          db.workouts.where('userId').equals(userId).toArray(),
-          db.weightLogs.where('userId').equals(userId).toArray(),
-          db.waterLogs.where('userId').equals(userId).toArray(),
-          db.medications.where('userId').equals(userId).toArray(),
-          db.medicationLogs.where('userId').equals(userId).toArray(),
-          db.notificationRules.where('userId').equals(userId).toArray()
-        ]);
+  public async triggerCloudSync(userId: string, profile: UserProfile): Promise<void> {
+    try {
+      console.log('[Auth] Triggering cloud sync for user:', userId);
+      // Gather all local data
+      const [meals, dailyActivities, workouts, weightLogs, waterLogs, medications, medicationLogs, notificationRules] = await Promise.all([
+        db.meals.where('userId').equals(userId).toArray(),
+        db.dailyActivity.where('userId').equals(userId).toArray(),
+        db.workouts.where('userId').equals(userId).toArray(),
+        db.weightLogs.where('userId').equals(userId).toArray(),
+        db.waterLogs.where('userId').equals(userId).toArray(),
+        db.medications.where('userId').equals(userId).toArray(),
+        db.medicationLogs.where('userId').equals(userId).toArray(),
+        db.notificationRules.where('userId').equals(userId).toArray()
+      ]);
 
-        await fullSyncOnLogin(userId, {
-          profile,
-          meals,
-          dailyActivities,
-          workouts,
-          weightLogs,
-          waterLogs,
-          medications,
-          medicationLogs,
-          notificationRules
-        }, {
-          putProfile: async (p) => { await db.userProfile.put(p); },
-          putMeals: async (items) => { await db.meals.bulkPut(items); },
-          putDailyActivities: async (items) => { await db.dailyActivity.bulkPut(items); },
-          putWorkouts: async (items) => { await db.workouts.bulkPut(items); },
-          putWeightLogs: async (items) => { await db.weightLogs.bulkPut(items); },
-          putWaterLogs: async (items) => { await db.waterLogs.bulkPut(items); },
-          putMedications: async (items) => { await db.medications.bulkPut(items); },
-          putMedicationLogs: async (items) => { await db.medicationLogs.bulkPut(items); },
-          putNotificationRules: async (items) => { await db.notificationRules.bulkPut(items); }
-        });
-      } catch (err) {
-        console.warn('[Auth] Cloud sync error (data is safe locally):', err);
-      }
-    })();
+      await fullSyncOnLogin(userId, {
+        profile,
+        meals,
+        dailyActivities,
+        workouts,
+        weightLogs,
+        waterLogs,
+        medications,
+        medicationLogs,
+        notificationRules
+      }, {
+        putProfile: async (p) => { await db.userProfile.put(p); },
+        putMeals: async (items) => { await db.meals.bulkPut(items); },
+        putDailyActivities: async (items) => { await db.dailyActivity.bulkPut(items); },
+        putWorkouts: async (items) => { await db.workouts.bulkPut(items); },
+        putWeightLogs: async (items) => { await db.weightLogs.bulkPut(items); },
+        putWaterLogs: async (items) => { await db.waterLogs.bulkPut(items); },
+        putMedications: async (items) => { await db.medications.bulkPut(items); },
+        putMedicationLogs: async (items) => { await db.medicationLogs.bulkPut(items); },
+        putNotificationRules: async (items) => { await db.notificationRules.bulkPut(items); }
+      });
+      console.log('[Auth] Cloud sync completed successfully ✅');
+    } catch (err) {
+      console.warn('[Auth] Cloud sync error (data is safe locally):', err);
+    }
   }
 
   /**

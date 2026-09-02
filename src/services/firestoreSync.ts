@@ -64,16 +64,36 @@ export function isCloudSyncEnabled(): boolean {
 }
 
 /**
+ * Recursively sanitizes an object for Firestore.
+ * Strips all `undefined` values because Firestore throws a runtime error if undefined is present.
+ */
+export function sanitizeForFirestore<T>(obj: T): any {
+  if (obj === null || obj === undefined) return null;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForFirestore(item)).filter(item => item !== undefined);
+  }
+  const result: Record<string, any> = {};
+  for (const [key, val] of Object.entries(obj as Record<string, any>)) {
+    if (val !== undefined) {
+      result[key] = sanitizeForFirestore(val);
+    }
+  }
+  return result;
+}
+
+/**
  * Safely push a document to Firestore (fire-and-forget with error logging)
  */
 async function safeSetDoc(docPath: string[], data: Record<string, any>): Promise<void> {
   if (!syncEnabled) return;
   try {
     const ref = doc(firestore, docPath.join('/'));
-    // Convert Date strings to keep them as strings (Firestore-friendly)
-    await setDoc(ref, { ...data, _syncedAt: new Date().toISOString() }, { merge: true });
+    const cleanData = sanitizeForFirestore(data);
+    await setDoc(ref, { ...cleanData, _syncedAt: new Date().toISOString() }, { merge: true });
+    console.log(`[Firestore Sync] ✅ Synced to cloud: ${docPath.join('/')}`);
   } catch (err) {
-    console.warn(`[Firestore Sync] Write failed for ${docPath.join('/')}:`, err);
+    console.error(`[Firestore Sync] ❌ Write failed for ${docPath.join('/')}:`, err);
   }
 }
 

@@ -209,9 +209,10 @@ export interface NotificationRule {
   description: string;
   enabled: boolean;
   time: string; // e.g. "20:00"
-  type: 'workout_reminder' | 'meal_reminder' | 'water_reminder' | 'weekly_summary' | 'streak_alert';
+  type: 'workout_reminder' | 'meal_reminder' | 'water_reminder' | 'medication_reminder' | 'custom_reminder' | 'weekly_summary' | 'streak_alert';
   mealType?: MealType;
   conditionDescription?: string;
+  soundTone?: 'bell' | 'water' | 'meal' | 'medication' | 'workout';
   lastTriggered?: string;
   snoozedUntil?: string;
 }

@@ -49,6 +49,7 @@ import { WorkoutLoggerModal } from './components/WorkoutLoggerModal';
 import { WeightLoggerModal } from './components/WeightLoggerModal';
 import { NotificationsCenterModal } from './components/NotificationsCenterModal';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
+import { ReminderToastContainer } from './components/ReminderToastContainer';
 
 /** Confetti celebration helper for goal milestones */
 function fireConfetti() {
@@ -553,6 +554,21 @@ export function App() {
         profile={profile}
         onProfileUpdated={setProfile}
         onLogout={handleLogout}
+      />
+
+      {/* Floating Audible Reminder Toast Overlay */}
+      <ReminderToastContainer
+        onQuickAction={(label) => {
+          if (label === 'Drink Water' || label.includes('Water')) {
+            handleLogWaterDelta(250);
+          } else if (label === 'Log Meal' || label.includes('Meal')) {
+            setIsAIScannerOpen(true);
+          } else if (label === 'View Steps' || label.includes('Step')) {
+            setActiveTab('workouts');
+          } else if (label === 'Log Weight' || label.includes('Weight')) {
+            setIsWeightModalOpen(true);
+          }
+        }}
       />
 
     </div>

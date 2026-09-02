@@ -1,12 +1,14 @@
 import { InAppNotification, NotificationRule, MealType } from '../types';
 import { db, getOrCreateDailyActivity, getTodayDateString, getUserProfile } from './db';
-import { soundFx } from './soundEffects';
+import { soundFx, triggerHaptic } from './soundEffects';
 
 export type NotificationListener = (notifications: InAppNotification[]) => void;
+export type ToastListener = (notification: InAppNotification) => void;
 
 class NotificationManager {
   private currentUserId: string | null = null;
   private listeners: Set<NotificationListener> = new Set();
+  private toastListeners: Set<ToastListener> = new Set();
   private timer: NodeJS.Timeout | null = null;
 
   public async setContext(userId: string) {
@@ -22,6 +24,7 @@ class NotificationManager {
     }
     this.currentUserId = null;
     this.listeners.clear();
+    this.toastListeners.clear();
   }
 
   public subscribe(cb: NotificationListener): () => void {
@@ -29,6 +32,13 @@ class NotificationManager {
     this.refreshNotifications();
     return () => {
       this.listeners.delete(cb);
+    };
+  }
+
+  public subscribeToToasts(cb: ToastListener): () => void {
+    this.toastListeners.add(cb);
+    return () => {
+      this.toastListeners.delete(cb);
     };
   }
 
@@ -68,7 +78,13 @@ class NotificationManager {
     return 'denied';
   }
 
-  public async triggerNotification(title: string, message: string, type: InAppNotification['type'] = 'info') {
+  public async triggerNotification(
+    title: string, 
+    message: string, 
+    type: InAppNotification['type'] = 'info',
+    actionLabel?: string,
+    actionUrl?: string
+  ) {
     if (!this.currentUserId) return;
 
     const newNotif: InAppNotification = {
@@ -77,13 +93,21 @@ class NotificationManager {
       title,
       message,
       type,
+      actionLabel,
+      actionUrl,
       timestamp: new Date().toISOString(),
       read: false
     };
 
     await db.inAppNotifications.put(newNotif);
-    soundFx.playTap();
+
+    // 🔔 Audible sound on EVERY reminder & notification
+    soundFx.playReminderSoundForType(title + ' ' + message);
+    triggerHaptic();
+
+    // Notify inbox listeners & show on-screen toast
     await this.notifyListeners();
+    this.toastListeners.forEach(cb => cb(newNotif));
 
     // Show native browser notification if granted
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -146,13 +170,13 @@ class NotificationManager {
     await db.notificationRules.update(ruleId, { snoozedUntil: snoozeTime });
   }
 
-  // --- Background Schedule Checker ---
+  // --- Background Schedule Checker (Precision 15-Second Evaluation) ---
   private startScheduleChecker() {
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
       this.evaluateRules();
-    }, 60000); // Check every minute
-    setTimeout(() => this.evaluateRules(), 3000);
+    }, 15000); // Check every 15 seconds to ensure zero missed reminders
+    setTimeout(() => this.evaluateRules(), 2000);
   }
 
   public async evaluateRules() {
@@ -185,7 +209,8 @@ class NotificationManager {
             await this.triggerNotification(
               'Hydration Reminder 💧',
               `Time for a refreshing glass of water! Current progress: ${(activity.waterMl / 1000).toFixed(2)}L / ${(activity.waterGoalMl / 1000).toFixed(1)}L goal.`,
-              'info'
+              'info',
+              'Drink Water'
             );
             localStorage.setItem(`vitaltrack_last_water_reminder_${userId}`, now.toISOString());
           }
@@ -195,6 +220,21 @@ class NotificationManager {
       for (const rule of rules) {
         if (rule.snoozedUntil && new Date(rule.snoozedUntil) > now) {
           continue;
+        }
+
+        // Custom time-based rules (Exact minute match)
+        if (rule.time && rule.time === currentTimeStr) {
+          const triggerKey = `vitaltrack_rule_triggered_${rule.id}_${today}_${currentTimeStr}`;
+          if (typeof window !== 'undefined' && !localStorage.getItem(triggerKey)) {
+            localStorage.setItem(triggerKey, '1');
+            await this.triggerNotification(
+              rule.title,
+              rule.description || `Scheduled alert for ${rule.time}`,
+              'reminder'
+            );
+            await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
+            continue;
+          }
         }
 
         if (rule.lastTriggered && rule.lastTriggered.startsWith(today)) {
@@ -207,9 +247,10 @@ class NotificationManager {
           if (activity.steps < activity.stepGoal * 0.7) {
             const stepsRemaining = activity.stepGoal - activity.steps;
             await this.triggerNotification(
-              'Evening Step Goal Catch-Up',
+              'Evening Step Goal Catch-Up 🚶‍♂️',
               `You are ${stepsRemaining.toLocaleString()} steps away from your ${activity.stepGoal.toLocaleString()} goal. A 20-minute evening stroll will close your ring!`,
-              'reminder'
+              'reminder',
+              'View Steps'
             );
             await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
           }
@@ -227,15 +268,16 @@ class NotificationManager {
 
             if (loggedMeals === 0) {
               const titles: Record<MealType, string> = {
-                breakfast: 'Morning Fuel Log',
-                lunch: 'Lunch Nutrition Check',
-                dinner: 'Dinner Calorie Log',
-                snack: 'Snack Log Reminder'
+                breakfast: 'Morning Fuel Log 🍳',
+                lunch: 'Lunch Nutrition Check 🥗',
+                dinner: 'Dinner Calorie Log 🍲',
+                snack: 'Snack Log Reminder 🍎'
               };
               await this.triggerNotification(
                 titles[rule.mealType] || 'Meal Reminder',
                 `Haven't logged ${rule.mealType} yet today. Take a quick photo with the AI Food Lens to balance your macros!`,
-                'reminder'
+                'reminder',
+                'Log Meal'
               );
               await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
             }
@@ -253,7 +295,8 @@ class NotificationManager {
             await this.triggerNotification(
               'Weekly Weigh-In Check ⚖️',
               `It has been ${daysPassed} days since your last weigh-in. Log your current weight today to update your 7-day progress trend!`,
-              'reminder'
+              'reminder',
+              'Log Weight'
             );
             await db.notificationRules.update(rule.id, { lastTriggered: now.toISOString() });
           }
@@ -282,14 +325,15 @@ class NotificationManager {
             .count();
 
           if (logsToday === 0) {
-            const lastMedTrigger = localStorage.getItem(`vitaltrack_med_reminder_${med.id}_${today}`);
+            const lastMedTrigger = localStorage.getItem(`vitaltrack_med_reminder_${med.id}_${today}_${currentTimeStr}`);
             if (!lastMedTrigger) {
               await this.triggerNotification(
                 `Medication Reminder: ${med.name} 💊`,
                 `Time to take ${med.name} (${med.dosage}, ${med.timing.replace('_', ' ')}). ${med.notes ? `Note: ${med.notes}` : ''}`,
-                'reminder'
+                'reminder',
+                'Take Pill'
               );
-              localStorage.setItem(`vitaltrack_med_reminder_${med.id}_${today}`, now.toISOString());
+              localStorage.setItem(`vitaltrack_med_reminder_${med.id}_${today}_${currentTimeStr}`, now.toISOString());
             }
           }
         }
@@ -297,6 +341,41 @@ class NotificationManager {
     } catch (err) {
       console.warn('Error evaluating notification rules:', err);
     }
+  }
+
+  public async addCustomRule(
+    title: string, 
+    time: string, 
+    type: NotificationRule['type'] = 'custom_reminder', 
+    description: string = '',
+    soundTone: NotificationRule['soundTone'] = 'bell'
+  ): Promise<NotificationRule | null> {
+    if (!this.currentUserId) return null;
+
+    const newRule: NotificationRule = {
+      id: `rule-${Date.now()}`,
+      userId: this.currentUserId,
+      title,
+      description: description || `Daily alarm set for ${time}`,
+      enabled: true,
+      time,
+      type,
+      soundTone
+    };
+
+    await db.notificationRules.put(newRule);
+    soundFx.playTap();
+    return newRule;
+  }
+
+  public async deleteRule(ruleId: string) {
+    await db.notificationRules.delete(ruleId);
+    soundFx.playTap();
+  }
+
+  public async toggleRule(ruleId: string, enabled: boolean) {
+    await db.notificationRules.update(ruleId, { enabled });
+    soundFx.playTap();
   }
 
   private timeStringToMinutes(t: string): number {

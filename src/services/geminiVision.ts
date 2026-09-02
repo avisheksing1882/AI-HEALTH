@@ -336,11 +336,19 @@ function processSampleMeal(sample: typeof PRESET_SAMPLE_MEALS[0], imageInput: st
 }
 
 function determineMealTypeByTime(suggested?: MealType): MealType {
-  if (suggested) return suggested;
-  const currentHour = new Date().getHours();
-  if (currentHour >= 5 && currentHour < 11) return 'breakfast';
-  if (currentHour >= 11 && currentHour < 16) return 'lunch';
-  if (currentHour >= 16 && currentHour < 19) return 'snack';
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const timeDecimal = currentHour + currentMinutes / 60;
+
+  // 04:00 AM - 11:30 AM is unequivocally Breakfast
+  if (timeDecimal >= 4 && timeDecimal < 11.5) return 'breakfast';
+  // 11:30 AM - 04:00 PM is Lunch
+  if (timeDecimal >= 11.5 && timeDecimal < 16) return 'lunch';
+  // 04:00 PM - 07:00 PM is Snack / Evening tea
+  if (timeDecimal >= 16 && timeDecimal < 19) return 'snack';
+  // 07:00 PM onwards or midnight is Dinner
+  if (suggested && timeDecimal >= 19) return suggested;
   return 'dinner';
 }
 

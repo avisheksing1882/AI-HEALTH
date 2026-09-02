@@ -40,6 +40,7 @@ interface AIFoodScannerModalProps {
   onMealSaved: (meal: MealLog) => void;
   profile: UserProfile;
   selectedDate: string;
+  initialMealType?: MealType;
   onOpenManualLogger?: () => void;
 }
 
@@ -49,6 +50,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   onMealSaved,
   profile,
   selectedDate,
+  initialMealType,
   onOpenManualLogger,
 }) => {
   const [mode, setMode] = useState<'camera' | 'upload' | 'presets'>('camera');
@@ -57,7 +59,8 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanStepMessage, setScanStepMessage] = useState('Initializing AI Vision...');
   const [analysisResult, setAnalysisResult] = useState<VisionAnalysisResult | null>(null);
-  const [selectedMealType, setSelectedMealType] = useState<MealType>('lunch');
+  const [selectedMealType, setSelectedMealType] = useState<MealType>(initialMealType || 'breakfast');
+  const [userLockedMealType, setUserLockedMealType] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -75,14 +78,23 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Initialize meal type based on time of day
+  // Initialize meal type based on target meal or time of day
   useEffect(() => {
     if (isOpen) {
-      const hour = new Date().getHours();
-      if (hour >= 5 && hour < 11) setSelectedMealType('breakfast');
-      else if (hour >= 11 && hour < 16) setSelectedMealType('lunch');
-      else if (hour >= 16 && hour < 19) setSelectedMealType('snack');
-      else setSelectedMealType('dinner');
+      if (initialMealType) {
+        setSelectedMealType(initialMealType);
+        setUserLockedMealType(true);
+      } else {
+        setUserLockedMealType(false);
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinutes = now.getMinutes();
+        const timeDecimal = currentHour + currentMinutes / 60;
+        if (timeDecimal >= 4 && timeDecimal < 11.5) setSelectedMealType('breakfast');
+        else if (timeDecimal >= 11.5 && timeDecimal < 16) setSelectedMealType('lunch');
+        else if (timeDecimal >= 16 && timeDecimal < 19) setSelectedMealType('snack');
+        else setSelectedMealType('dinner');
+      }
 
       // Auto start camera if supported
       startCamera(false);
@@ -92,6 +104,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       setAnalysisResult(null);
       setIsScanning(false);
       setErrorMessage(null);
+      setUserLockedMealType(false);
     }
   }, [isOpen]);
 
@@ -246,7 +259,10 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       clearInterval(stepTimer);
       setIsScanning(false);
       setAnalysisResult(result);
-      setSelectedMealType(result.mealType);
+      // Never overwrite mealType if user or caller specified one
+      if (!initialMealType && !userLockedMealType) {
+        setSelectedMealType(result.mealType);
+      }
       soundFx.playSuccessChime();
       triggerHaptic();
     } catch (err: unknown) {
@@ -1081,6 +1097,39 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                 })}
                 </div>
 
+              </div>
+
+              {/* Category Confirmation & Selector Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Log this meal to:
+                  </span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-lg bg-emerald-500 text-white font-extrabold capitalize shadow-sm">
+                    {selectedMealType}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 bg-white/80 dark:bg-obsidian-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                  {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playTap();
+                        setSelectedMealType(m);
+                        setUserLockedMealType(true);
+                      }}
+                      className={`px-3 py-1 rounded-lg capitalize transition ${
+                        selectedMealType === m
+                          ? 'bg-emerald-500 text-white shadow-sm font-extrabold'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Disclaimer Notice */}

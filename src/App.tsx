@@ -7,7 +7,8 @@ import {
   WorkoutLog, 
   WeightLog, 
   NutritionInsight,
-  AuthSession
+  AuthSession,
+  MealType
 } from './types';
 import { 
   db, 
@@ -80,6 +81,7 @@ export function App() {
 
   // Modals state
   const [isAIScannerOpen, setIsAIScannerOpen] = useState(false);
+  const [scannerTargetMealType, setScannerTargetMealType] = useState<MealType | undefined>(undefined);
   const [isManualFoodOpen, setIsManualFoodOpen] = useState(false);
   const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false);
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
@@ -317,6 +319,23 @@ export function App() {
     }
   };
 
+  const handleOpenAIScanner = (mealType?: MealType) => {
+    setScannerTargetMealType(mealType);
+    setIsAIScannerOpen(true);
+  };
+
+  const handleUpdateMeal = async (updatedMeal: MealLog) => {
+    if (!profile) return;
+    await saveMealLogWithCache(updatedMeal);
+    const updated = meals.map(m => m.id === updatedMeal.id ? updatedMeal : m);
+    setMeals(updated);
+
+    if (activity) {
+      const genInsights = generateNutritionInsights(updated, activity, profile);
+      setInsights(genInsights);
+    }
+  };
+
   const handleWorkoutSaved = async (newWorkout: WorkoutLog) => {
     if (!profile) return;
     await saveWorkoutLogWithCache(newWorkout);
@@ -454,7 +473,7 @@ export function App() {
                 workouts={workouts}
                 insights={insights}
                 selectedDate={selectedDate}
-                onOpenAIScanner={() => setIsAIScannerOpen(true)}
+                onOpenAIScanner={handleOpenAIScanner}
                 onOpenManualFoodLogger={() => setIsManualFoodOpen(true)}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}
                 onOpenWeightModal={() => setIsWeightModalOpen(true)}
@@ -463,6 +482,7 @@ export function App() {
                 onWaterUpdated={handleWaterUpdated}
                 onLogWaterDelta={handleLogWaterDelta}
                 onDeleteMeal={handleDeleteMeal}
+                onUpdateMeal={handleUpdateMeal}
               />
             )}
 
@@ -489,7 +509,7 @@ export function App() {
                 selectedDate={selectedDate}
                 onDateChange={setSelectedDate}
                 profile={profile}
-                onOpenAIScanner={() => setIsAIScannerOpen(true)}
+                onOpenAIScanner={() => handleOpenAIScanner()}
                 onOpenWorkoutModal={() => setIsWorkoutModalOpen(true)}
                 onBackToDashboard={() => setActiveTab('dashboard')}
               />
@@ -502,16 +522,20 @@ export function App() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={(t) => setActiveTab(t as typeof activeTab)}
-        onOpenAIScanner={() => setIsAIScannerOpen(true)}
+        onOpenAIScanner={() => handleOpenAIScanner()}
       />
 
       {/* Interactive Modals */}
       <AIFoodScannerModal
         isOpen={isAIScannerOpen}
-        onClose={() => setIsAIScannerOpen(false)}
+        onClose={() => {
+          setIsAIScannerOpen(false);
+          setScannerTargetMealType(undefined);
+        }}
         onMealSaved={handleMealSaved}
         profile={profile}
         selectedDate={selectedDate}
+        initialMealType={scannerTargetMealType}
         onOpenManualLogger={() => {
           setIsAIScannerOpen(false);
           setIsManualFoodOpen(true);

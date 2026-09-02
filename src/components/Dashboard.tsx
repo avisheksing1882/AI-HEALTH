@@ -12,7 +12,7 @@ import {
   ChevronRight,
   Share2 
 } from 'lucide-react';
-import { DailyActivityLog, MealLog, NutritionInsight, UserProfile, WorkoutLog, WeightLog } from '../types';
+import { DailyActivityLog, MealLog, NutritionInsight, UserProfile, WorkoutLog, WeightLog, MealType } from '../types';
 import { db } from '../services/db';
 import { calculateWeeklyWeightAnalysis, WeeklyWeightAnalysis } from '../services/nutritionCalculator';
 import { ActivityRings } from './ActivityRings';
@@ -33,8 +33,8 @@ interface DashboardProps {
   workouts: WorkoutLog[];
   insights: NutritionInsight[];
   selectedDate?: string;
-  onOpenAIScanner: () => void;
-  onOpenManualFoodLogger: () => void;
+  onOpenAIScanner: (mealType?: MealType) => void;
+  onOpenManualFoodLogger: (mealType?: MealType) => void;
   onOpenWorkoutModal: () => void;
   onOpenWeightModal: () => void;
   onOpenSettings?: () => void;
@@ -42,6 +42,7 @@ interface DashboardProps {
   onWaterUpdated: (amountMl: number) => void;
   onLogWaterDelta?: (deltaMl: number) => void;
   onDeleteMeal: (id: string) => void;
+  onUpdateMeal?: (meal: MealLog) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -60,6 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onWaterUpdated,
   onLogWaterDelta,
   onDeleteMeal,
+  onUpdateMeal,
 }) => {
   const [weeklyWeightAnalysis, setWeeklyWeightAnalysis] = useState<WeeklyWeightAnalysis | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -306,6 +308,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             healthConditions={profile.healthConditions}
             selectedDate={selectedDate}
             onDeleteMeal={onDeleteMeal}
+            onUpdateMeal={onUpdateMeal}
             onOpenAIScanner={onOpenAIScanner}
             onOpenManualLogger={onOpenManualFoodLogger}
           />

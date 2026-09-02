@@ -12,6 +12,19 @@ import {
   Medication,
   MedicationLog
 } from '../types';
+import {
+  syncProfileToCloud,
+  syncMealToCloud,
+  deleteMealFromCloud,
+  syncDailyActivityToCloud,
+  syncWorkoutToCloud,
+  syncWeightLogToCloud,
+  syncWaterLogToCloud,
+  syncMedicationToCloud,
+  deleteMedicationFromCloud,
+  syncMedicationLogToCloud,
+  syncNotificationRuleToCloud
+} from './firestoreSync';
 
 // ==========================================
 // 🛡️ DUAL-LAYER STORAGE: LOCALSTORAGE BACKUP & CACHE
@@ -271,6 +284,8 @@ export function createDefaultUserProfile(userId: string, email: string, name: st
     updatedAt: new Date().toISOString()
   };
   saveProfileToRegistry(profile);
+  // Cloud sync
+  syncProfileToCloud(profile);
   return profile;
 }
 
@@ -410,6 +425,8 @@ export async function saveUserProfile(userId: string, changes: Partial<UserProfi
   // Dual-write to DB and Cache
   await db.userProfile.put(updated);
   saveProfileToRegistry(updated);
+  // Cloud sync
+  syncProfileToCloud(updated);
   return updated;
 }
 
@@ -501,6 +518,8 @@ export async function updateDailyActivity(userId: string, date: string, changes:
   const filtered = cachedList.filter(a => a.id !== updated.id);
   filtered.push(updated);
   saveToLocalCache(userId, 'dailyActivity', filtered);
+  // Cloud sync
+  syncDailyActivityToCloud(updated);
 
   return updated;
 }
@@ -514,6 +533,8 @@ export async function saveMealLogWithCache(meal: MealLog): Promise<void> {
   const filtered = cached.filter(m => m.id !== meal.id);
   filtered.push(meal);
   saveToLocalCache(meal.userId, 'meals', filtered);
+  // Cloud sync
+  syncMealToCloud(meal);
 }
 
 /**
@@ -524,6 +545,8 @@ export async function deleteMealLogWithCache(userId: string, mealId: string): Pr
   const cached = readFromLocalCache<MealLog>(userId, 'meals');
   const filtered = cached.filter(m => m.id !== mealId);
   saveToLocalCache(userId, 'meals', filtered);
+  // Cloud sync
+  deleteMealFromCloud(userId, mealId);
 }
 
 /**
@@ -535,6 +558,8 @@ export async function saveWorkoutLogWithCache(workout: WorkoutLog): Promise<void
   const filtered = cached.filter(w => w.id !== workout.id);
   filtered.push(workout);
   saveToLocalCache(workout.userId, 'workouts', filtered);
+  // Cloud sync
+  syncWorkoutToCloud(workout);
 }
 
 /**
@@ -546,6 +571,8 @@ export async function saveWeightLogWithCache(weight: WeightLog): Promise<void> {
   const filtered = cached.filter(w => w.id !== weight.id);
   filtered.push(weight);
   saveToLocalCache(weight.userId, 'weightLogs', filtered);
+  // Cloud sync
+  syncWeightLogToCloud(weight);
 }
 
 /**
@@ -557,6 +584,8 @@ export async function saveWaterLogWithCache(water: WaterLog): Promise<void> {
   const filtered = cached.filter(w => w.id !== water.id);
   filtered.push(water);
   saveToLocalCache(water.userId, 'waterLogs', filtered);
+  // Cloud sync
+  syncWaterLogToCloud(water);
 }
 
 /**
@@ -600,6 +629,8 @@ export async function saveMedication(med: Medication): Promise<void> {
   const filtered = cached.filter(m => m.id !== med.id);
   filtered.push(med);
   saveToLocalCache(med.userId, 'medications', filtered);
+  // Cloud sync
+  syncMedicationToCloud(med);
 }
 
 /**
@@ -615,6 +646,8 @@ export async function deleteMedication(userId: string, medId: string): Promise<v
   const cached = readFromLocalCache<Medication>(userId, 'medications');
   const filtered = cached.filter(m => m.id !== medId);
   saveToLocalCache(userId, 'medications', filtered);
+  // Cloud sync
+  deleteMedicationFromCloud(userId, medId);
 }
 
 /**
@@ -630,6 +663,8 @@ export async function logMedicationStatus(log: MedicationLog): Promise<void> {
   const filtered = cached.filter(l => !(l.medicationId === log.medicationId && l.date === log.date));
   filtered.push(log);
   saveToLocalCache(log.userId, 'medicationLogs', filtered);
+  // Cloud sync
+  syncMedicationLogToCloud(log);
 }
 
 /**

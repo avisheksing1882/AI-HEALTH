@@ -155,8 +155,10 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
     const totalFiber = Math.round(newItems.reduce((acc, i) => acc + (Number(i.fiber) || 0), 0) * 10) / 10;
 
     // Also update meal title if it referenced the old food name
-    let updatedTitle = targetMeal.title;
-    if (oldItem && oldItem.name && updatedItem.name !== oldItem.name && targetMeal.title.toLowerCase().includes(oldItem.name.toLowerCase())) {
+    let updatedTitle = targetMeal.title?.trim() || '';
+    if (!updatedTitle) {
+      updatedTitle = newItems.map(i => i.name).filter(Boolean).join(', ');
+    } else if (oldItem && oldItem.name && updatedItem.name !== oldItem.name && updatedTitle.toLowerCase().includes(oldItem.name.toLowerCase())) {
       const reg = new RegExp(oldItem.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       updatedTitle = updatedTitle.replace(reg, updatedItem.name);
     }
@@ -326,94 +328,139 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                       ? 'border-yellow-500/40'
                       : 'border-slate-200 dark:border-slate-800/80';
 
+                    const mealTitleText = meal.title?.trim() 
+                      || (meal.items && meal.items.length > 0 ? meal.items.map(i => i.name).filter(Boolean).join(', ') : '') 
+                      || `${section.label} Meal`;
+
                     return (
                       <div
                         key={meal.id}
                         onClick={() => toggleExpand(meal.id)}
                         className={`bg-white dark:bg-obsidian-900 rounded-2xl p-3.5 border ${cardBorder} cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition shadow-sm`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {meal.photoUri ? (
-                              <img
-                                src={meal.photoUri}
-                                alt={meal.title}
-                                className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                                <Utensils className="w-5 h-5" />
-                              </div>
-                            )}
+                        {/* Meal Card Content Header */}
+                        <div className="space-y-2.5">
+                          {/* Top Row: Thumbnail + Title & Time + Total Calories & Expand Chevron */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              {meal.photoUri ? (
+                                <img
+                                  src={meal.photoUri}
+                                  alt={mealTitleText}
+                                  className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                                  <Utensils className="w-5 h-5" />
+                                </div>
+                              )}
 
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {editingMealTitle?.id === meal.id ? (
-                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                    <input
-                                      type="text"
-                                      value={editingMealTitle.title}
-                                      onChange={(e) => setEditingMealTitle({ ...editingMealTitle, title: e.target.value })}
-                                      className="text-xs font-bold text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-obsidian-950 border border-emerald-500 focus:outline-none"
-                                      autoFocus
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveMealTitle();
-                                        if (e.key === 'Escape') setEditingMealTitle(null);
-                                      }}
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={handleSaveMealTitle}
-                                      className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition"
-                                      title="Save title"
-                                    >
-                                      <Check className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingMealTitle(null)}
-                                      className="p-1 rounded text-slate-400 hover:text-slate-600 transition"
-                                      title="Cancel"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                                      {meal.title}
-                                    </span>
-                                    {onUpdateMeal && (
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {editingMealTitle?.id === meal.id ? (
+                                    <div className="flex items-center gap-1 w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="text"
+                                        value={editingMealTitle.title}
+                                        onChange={(e) => setEditingMealTitle({ ...editingMealTitle, title: e.target.value })}
+                                        className="text-xs font-bold text-slate-800 dark:text-slate-100 px-2 py-1 rounded-lg bg-slate-100 dark:bg-obsidian-950 border border-emerald-500 focus:outline-none flex-1 min-w-0"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveMealTitle();
+                                          if (e.key === 'Escape') setEditingMealTitle(null);
+                                        }}
+                                      />
                                       <button
                                         type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          soundFx.playTap();
-                                          setEditingMealTitle({ id: meal.id, title: meal.title });
-                                        }}
-                                        className="p-0.5 rounded text-slate-400 hover:text-emerald-500 transition"
-                                        title="Rename meal title"
+                                        onClick={handleSaveMealTitle}
+                                        className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition"
+                                        title="Save title"
                                       >
-                                        <Pencil className="w-3 h-3" />
+                                        <Check className="w-3.5 h-3.5" />
                                       </button>
-                                    )}
-                                  </>
-                                )}
-                                {meal.aiAnalyzed && (
-                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-500 font-bold border border-cyan-500/20 flex items-center gap-0.5">
-                                    <Sparkles className="w-2.5 h-2.5" /> AI
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 flex-wrap">
-                                <span>{meal.time}</span>
-                                <span>•</span>
-                                <span>P: {meal.totalProtein}g</span>
-                                <span>C: {meal.totalCarbs}g</span>
-                                <span>F: {meal.totalFat}g</span>
-                                {meal.totalFiber ? <span>• Fib: {meal.totalFiber}g</span> : null}
-                              </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingMealTitle(null)}
+                                        className="p-1 rounded text-slate-400 hover:text-slate-600 transition"
+                                        title="Cancel"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-1">
+                                        {mealTitleText}
+                                      </span>
+                                      {onUpdateMeal && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            soundFx.playTap();
+                                            setEditingMealTitle({ id: meal.id, title: mealTitleText });
+                                          }}
+                                          className="p-0.5 rounded text-slate-400 hover:text-emerald-500 transition"
+                                          title="Rename meal title"
+                                        >
+                                          <Pencil className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
 
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  <span>{meal.time}</span>
+                                  {meal.aiAnalyzed && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/10 text-cyan-500 font-bold border border-cyan-500/20 inline-flex items-center gap-0.5">
+                                      <Sparkles className="w-2.5 h-2.5" /> AI
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Calories & Expand Arrow */}
+                            <div className="flex items-center gap-2.5 shrink-0">
+                              <div className="text-right">
+                                <span className="text-base font-black text-slate-900 dark:text-white block leading-tight">
+                                  {meal.totalCalories}
+                                </span>
+                                <span className="text-[10px] font-semibold text-slate-400 block -mt-0.5">kcal</span>
+                              </div>
+                              <div className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Sub-row: Full Macro Badges + Category Selector + Delete */}
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/70 flex-wrap">
+                            {/* Macronutrients in dedicated pills */}
+                            <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] font-bold">
+                              <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                P: {meal.totalProtein}g
+                              </span>
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                C: {meal.totalCarbs}g
+                              </span>
+                              <span className="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                F: {meal.totalFat}g
+                              </span>
+                              {meal.totalFiber ? (
+                                <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  Fib: {meal.totalFiber}g
+                                </span>
+                              ) : null}
+                            </div>
+
+                            {/* Action Buttons: Category selector + Delete */}
+                            <div className="flex items-center gap-2 ml-auto" onClick={(e) => e.stopPropagation()}>
                               {/* One-Click Fix: Move morning scan to Breakfast */}
                               {meal.mealType !== 'breakfast' && (meal.time < '11:30' || meal.time.startsWith('10:')) && onUpdateMeal && (
                                 <button
@@ -423,54 +470,39 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                     triggerHaptic();
                                     onUpdateMeal({ ...meal, mealType: 'breakfast' });
                                   }}
-                                  className="mt-1.5 px-2 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 font-bold text-[10px] border border-amber-500/30 inline-flex items-center gap-1 transition"
+                                  className="px-2 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 font-bold text-[10px] border border-amber-500/30 inline-flex items-center gap-1 transition"
                                   title="Logged in morning. Click to move to Breakfast"
                                 >
                                   <span>🍳 Move to Breakfast</span>
                                 </button>
                               )}
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-extrabold text-slate-900 dark:text-white">
-                              {meal.totalCalories} <span className="text-[10px] font-normal text-slate-400">kcal</span>
-                            </span>
+                              {onUpdateMeal && (
+                                <select
+                                  value={meal.mealType}
+                                  onChange={(e) => {
+                                    soundFx.playSuccessChime();
+                                    triggerHaptic();
+                                    onUpdateMeal({ ...meal, mealType: e.target.value as MealType });
+                                  }}
+                                  className="text-[10px] sm:text-[11px] font-bold bg-slate-100 dark:bg-obsidian-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer hover:border-emerald-500 transition capitalize"
+                                  title="Change meal category"
+                                >
+                                  <option value="breakfast">Breakfast</option>
+                                  <option value="lunch">Lunch</option>
+                                  <option value="dinner">Dinner</option>
+                                  <option value="snack">Snack</option>
+                                </select>
+                              )}
 
-                            {/* Category Switcher */}
-                            {onUpdateMeal && (
-                              <select
-                                value={meal.mealType}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  soundFx.playSuccessChime();
-                                  triggerHaptic();
-                                  onUpdateMeal({ ...meal, mealType: e.target.value as MealType });
-                                }}
-                                className="text-[10px] font-bold bg-slate-100 dark:bg-obsidian-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer hover:border-emerald-500 transition capitalize"
-                                title="Change meal category"
+                              <button
+                                onClick={(e) => handleDelete(meal.id, e)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                                title="Delete meal"
                               >
-                                <option value="breakfast">Breakfast</option>
-                                <option value="lunch">Lunch</option>
-                                <option value="dinner">Dinner</option>
-                                <option value="snack">Snack</option>
-                              </select>
-                            )}
-
-                            <button
-                              onClick={(e) => handleDelete(meal.id, e)}
-                              className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
-                              title="Delete meal"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4 text-slate-400" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4 text-slate-400" />
-                            )}
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
 

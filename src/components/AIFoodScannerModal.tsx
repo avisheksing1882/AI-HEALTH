@@ -60,8 +60,19 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanStepMessage, setScanStepMessage] = useState('Initializing AI Vision...');
   const [analysisResult, setAnalysisResult] = useState<VisionAnalysisResult | null>(null);
-  const [selectedMealType, setSelectedMealType] = useState<MealType>(initialMealType || 'breakfast');
-  const [userLockedMealType, setUserLockedMealType] = useState(false);
+  const getDefaultMealTypeByClock = (): MealType => {
+    const hour = new Date().getHours();
+    const min = new Date().getMinutes();
+    const total = hour * 60 + min;
+    if (total >= 4 * 60 && total < 11 * 60 + 30) return 'breakfast';
+    if (total >= 11 * 60 + 30 && total < 16 * 60 + 30) return 'lunch';
+    if (total >= 16 * 60 + 30 && total < 18 * 60 + 30) return 'snack';
+    if (total >= 18 * 60 + 30 && total < 22 * 60 + 30) return 'dinner';
+    return 'snack';
+  };
+
+  const [selectedMealType, setSelectedMealType] = useState<MealType>(initialMealType || getDefaultMealTypeByClock());
+  const [userLockedMealType, setUserLockedMealType] = useState(Boolean(initialMealType));
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -262,7 +273,16 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       setAnalysisResult(result);
       // Never overwrite mealType if user or caller specified one
       if (!initialMealType && !userLockedMealType) {
-        setSelectedMealType(result.mealType);
+        const currentHour = new Date().getHours();
+        const currentMinutes = new Date().getMinutes();
+        const totalMinutes = currentHour * 60 + currentMinutes;
+        const isMorning = totalMinutes >= 4 * 60 && totalMinutes < 11 * 60 + 30;
+
+        if (isMorning) {
+          setSelectedMealType('breakfast');
+        } else {
+          setSelectedMealType(result.mealType);
+        }
       }
       soundFx.playSuccessChime();
       triggerHaptic();
@@ -362,12 +382,22 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
     triggerHaptic();
 
     const now = new Date();
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+    const totalMins = currentHour * 60 + currentMin;
+    const isMorning = totalMins >= 4 * 60 && totalMins < 11 * 60 + 45;
+
+    let finalMealType = selectedMealType;
+    if (!userLockedMealType && isMorning && selectedMealType === 'lunch') {
+      finalMealType = 'breakfast';
+    }
+
     const mealLog: MealLog = {
       id: `meal-${Date.now()}`,
       userId: profile.id,
       date: selectedDate,
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-      mealType: selectedMealType,
+      mealType: finalMealType,
       title: analysisResult.title,
       photoUri: selectedImage || undefined,
       items: analysisResult.items,
@@ -381,7 +411,7 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
       aiAnalyzed: true,
       confidenceScore: analysisResult.confidenceScore,
       disclaimer: analysisResult.disclaimer,
-      userModified: true,
+      userModified: userLockedMealType,
       createdAt: now.toISOString(),
     };
 

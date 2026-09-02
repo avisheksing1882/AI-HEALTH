@@ -212,11 +212,21 @@ export function App() {
       const userId = profile.id;
 
       const act = await getOrCreateDailyActivity(userId, selectedDate, profile);
-      const m = await db.meals
+      const rawMeals = await db.meals
         .where('userId')
         .equals(userId)
         .and(item => item.date === selectedDate)
         .toArray();
+
+      // ⚡ Auto-heal: Fix any morning meal (04:00 - 11:45 AM) erroneously tagged as lunch
+      const m = rawMeals.map(item => {
+        if (item.time && item.time >= '04:00' && item.time < '11:45' && item.mealType === 'lunch') {
+          const fixed: MealLog = { ...item, mealType: 'breakfast' };
+          saveMealLogWithCache(fixed).catch(() => {});
+          return fixed;
+        }
+        return item;
+      });
 
       const w = await db.workouts
         .where('userId')
@@ -242,11 +252,20 @@ export function App() {
     // 1. Immediately hydrate user-specific daily activity, meals, and workouts
     const userId = newProfile.id;
     const act = await getOrCreateDailyActivity(userId, selectedDate, newProfile);
-    const m = await db.meals
+    const rawMeals = await db.meals
       .where('userId')
       .equals(userId)
       .and(item => item.date === selectedDate)
       .toArray();
+
+    const m = rawMeals.map(item => {
+      if (item.time && item.time >= '04:00' && item.time < '11:45' && item.mealType === 'lunch') {
+        const fixed: MealLog = { ...item, mealType: 'breakfast' };
+        saveMealLogWithCache(fixed).catch(() => {});
+        return fixed;
+      }
+      return item;
+    });
 
     const w = await db.workouts
       .where('userId')

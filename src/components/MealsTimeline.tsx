@@ -92,6 +92,42 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
     return () => clearTimeout(timer);
   }, [editingIngredient?.name, editingIngredient?.portionGrams]);
 
+  // ⚡ Ensure morning meals never falsely pollute Lunch
+  const getEffectiveMealType = (meal: MealLog): MealType => {
+    if (meal.time && meal.time >= '04:00' && meal.time < '11:45' && meal.mealType === 'lunch') {
+      return 'breakfast';
+    }
+    return meal.mealType;
+  };
+
+  // ⚡ Auto-healing: If any meal in state/database has a morning timestamp but was marked lunch, fix it in db
+  useEffect(() => {
+    if (!onUpdateMeal) return;
+    meals.forEach(meal => {
+      if (meal.time && meal.time >= '04:00' && meal.time < '11:45' && meal.mealType === 'lunch') {
+        onUpdateMeal({ ...meal, mealType: 'breakfast' });
+      }
+    });
+  }, [meals, onUpdateMeal]);
+
+  // Identify consecutive duplicate scans in breakfast (< 5 min apart)
+  const breakfastMeals = meals.filter(m => getEffectiveMealType(m) === 'breakfast');
+  const hasDuplicateMorningScans = breakfastMeals.length > 1 && (() => {
+    const times = breakfastMeals.map(m => {
+      const [h, min] = (m.time || '00:00').split(':').map(Number);
+      return h * 60 + min;
+    }).sort((a, b) => a - b);
+    return (times[times.length - 1] - times[0]) <= 5;
+  })();
+
+  const handleKeepLatestMorningScan = () => {
+    soundFx.playSuccessChime();
+    triggerHaptic();
+    const sorted = [...breakfastMeals].sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+    const toDelete = sorted.slice(1);
+    toDelete.forEach(item => onDeleteMeal(item.id));
+  };
+
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
 
@@ -267,7 +303,7 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
       {/* Sections */}
       <div className="space-y-3">
         {MEAL_SECTIONS.map(section => {
-          const sectionMeals = meals.filter(m => m.mealType === section.type);
+          const sectionMeals = meals.filter(m => getEffectiveMealType(m) === section.type);
           const totalSectionKcal = sectionMeals.reduce((acc, m) => acc + m.totalCalories, 0);
 
           return (
@@ -301,6 +337,26 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Duplicate Morning Plate Retries Notice & 1-Click Clean */}
+              {section.type === 'breakfast' && hasDuplicateMorningScans && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="font-bold block">Multiple Plate Retries Detected ({breakfastMeals.length} scans)</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Scanned within 3 mins. Keep only your final breakfast plate?</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleKeepLatestMorningScan}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition shrink-0 ml-2"
+                  >
+                    Keep Latest Only
+                  </button>
+                </div>
+              )}
 
               {/* Meals in this section */}
               {sectionMeals.length > 0 && (

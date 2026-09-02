@@ -499,24 +499,15 @@ export const NotificationsCenterModal: React.FC<NotificationsCenterModalProps> =
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-1">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Alerts History</span>
-                <div className="flex items-center gap-3">
+                {notifications.length > 0 && (
                   <button
-                    onClick={handleTriggerLiveTest}
-                    className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                    onClick={handleClearAll}
+                    className="text-xs text-rose-500 hover:underline flex items-center gap-1"
                   >
-                    <Send className="w-3 h-3" />
-                    Test Sound Alert
+                    <Trash2 className="w-3 h-3" />
+                    Clear All
                   </button>
-                  {notifications.length > 0 && (
-                    <button
-                      onClick={handleClearAll}
-                      className="text-xs text-rose-500 hover:underline flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Clear All
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
               {notifications.length === 0 ? (

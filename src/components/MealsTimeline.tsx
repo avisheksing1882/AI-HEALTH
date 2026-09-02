@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers, Pencil, Check, X, ShieldCheck, Flame, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers, Pencil, Check, X, ShieldCheck, Flame, Loader2, RotateCcw } from 'lucide-react';
 import { MealLog, MealType, HealthCondition, FoodItemNutrition } from '../types';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 import { evaluateFoodForHealthConditions } from '../services/healthConditionFoodEvaluator';
@@ -110,23 +110,9 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
     });
   }, [meals, onUpdateMeal]);
 
-  // Identify consecutive duplicate scans in breakfast (< 5 min apart)
-  const breakfastMeals = meals.filter(m => getEffectiveMealType(m) === 'breakfast');
-  const hasDuplicateMorningScans = breakfastMeals.length > 1 && (() => {
-    const times = breakfastMeals.map(m => {
-      const [h, min] = (m.time || '00:00').split(':').map(Number);
-      return h * 60 + min;
-    }).sort((a, b) => a - b);
-    return (times[times.length - 1] - times[0]) <= 5;
-  })();
-
-  const handleKeepLatestMorningScan = () => {
-    soundFx.playSuccessChime();
-    triggerHaptic();
-    const sorted = [...breakfastMeals].sort((a, b) => (b.time || '').localeCompare(a.time || ''));
-    const toDelete = sorted.slice(1);
-    toDelete.forEach(item => onDeleteMeal(item.id));
-  };
+  // Undo meal/plate deletion state
+  const [undoMeal, setUndoMeal] = useState<MealLog | null>(null);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -155,7 +141,28 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
     e.stopPropagation();
     soundFx.playTap();
     triggerHaptic();
+
+    const targetMeal = meals.find(m => m.id === id);
+    if (targetMeal) {
+      setUndoMeal(targetMeal);
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = setTimeout(() => {
+        setUndoMeal(null);
+      }, 10000); // 10s undo window
+    }
+
     onDeleteMeal(id);
+  };
+
+  const handleUndoDelete = () => {
+    if (!undoMeal) return;
+    soundFx.playSuccessChime();
+    triggerHaptic();
+    if (onUpdateMeal) {
+      onUpdateMeal(undoMeal);
+    }
+    setUndoMeal(null);
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
   };
 
   const handleSaveEditedIngredient = () => {
@@ -343,25 +350,6 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                 </div>
               </div>
 
-              {/* Duplicate Morning Plate Retries Notice & 1-Click Clean */}
-              {section.type === 'breakfast' && hasDuplicateMorningScans && (
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                    <div>
-                      <span className="font-bold block">Multiple Plate Retries Detected ({breakfastMeals.length} scans)</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Scanned within 3 mins. Keep only your final breakfast plate?</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleKeepLatestMorningScan}
-                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition shrink-0 ml-2"
-                  >
-                    Keep Latest Only
-                  </button>
-                </div>
-              )}
 
               {/* Meals in this section */}
               {sectionMeals.length > 0 && (
@@ -908,6 +896,54 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ↩️ Undo Plate / Image Delete Notification Toast */}
+      {undoMeal && (
+        <div 
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-950/95 text-white border border-emerald-500/40 shadow-2xl backdrop-blur-md animate-fade-in text-xs max-w-md w-[92%] sm:w-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {undoMeal.photoUri ? (
+            <img 
+              src={undoMeal.photoUri} 
+              alt="Deleted Plate" 
+              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-700 shadow-sm" 
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <Utensils className="w-5 h-5" />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <span className="font-bold truncate block text-slate-100">
+              Plate deleted
+            </span>
+            <span className="text-[11px] text-slate-400 truncate block">
+              {undoMeal.title || 'Meal item'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleUndoDelete}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 transition shrink-0"
+            title="Restore deleted plate image and data"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Undo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setUndoMeal(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-white transition shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

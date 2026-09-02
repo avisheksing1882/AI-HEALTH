@@ -346,7 +346,10 @@ export function App() {
   const handleUpdateMeal = async (updatedMeal: MealLog) => {
     if (!profile) return;
     await saveMealLogWithCache(updatedMeal);
-    const updated = meals.map(m => m.id === updatedMeal.id ? updatedMeal : m);
+    const exists = meals.some(m => m.id === updatedMeal.id);
+    const updated = exists
+      ? meals.map(m => m.id === updatedMeal.id ? updatedMeal : m)
+      : [...meals, updatedMeal];
     setMeals(updated);
 
     if (activity) {

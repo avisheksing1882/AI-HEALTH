@@ -88,11 +88,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" 
               onClick={() => onTabChange('dashboard')}
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-0.5 shadow-md shadow-emerald-500/20 flex items-center justify-center">
-                <div className="w-full h-full bg-white dark:bg-obsidian-950 rounded-[10px] sm:rounded-[14px] flex items-center justify-center">
-                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 dark:text-emerald-400 animate-pulse-subtle" />
-                </div>
-              </div>
+              <img 
+                src="/assets/vital-track-logo.svg" 
+                alt="VitalTrack Logo" 
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl shadow-md shadow-orange-500/20 object-contain shrink-0" 
+              />
               <div className="flex items-center gap-1">
                 <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-emerald-600 to-cyan-600 dark:from-white dark:via-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent">
                   VitalTrack

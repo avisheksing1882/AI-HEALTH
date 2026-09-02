@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Vibrant App Icon Background Gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF3366" />
+      <stop offset="100%" stop-color="#FF9933" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow for the Logo Mark -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Squircle Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGradient)" />
+
+  <!-- Logo Mark Group -->
+  <g filter="url(#dropShadow)" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    
+    <!-- "Track" Location Pin -->
+    <path 
+      d="M 136,220 
+         A 120,120 0 1,1 376,220 
+         C 376,310 256,420 256,420 
+         C 256,420 136,310 136,220 Z" 
+      stroke-width="32" 
+    />
+    
+    <!-- "Vital" Heartbeat Pulse -->
+    <polyline 
+      points="176,210 216,210 236,160 266,270 286,210 336,210" 
+      stroke-width="28" 
+    />
+    
+  </g>
+</svg>

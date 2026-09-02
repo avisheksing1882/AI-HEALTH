@@ -39,11 +39,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       {/* Top Brand Header */}
       <header className="relative z-10 max-w-6xl mx-auto w-full px-6 pt-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 p-0.5 shadow-lg shadow-emerald-500/20">
-            <div className="w-full h-full bg-obsidian-950 rounded-[14px] flex items-center justify-center">
-              <Activity className="w-5 h-5 text-emerald-400" />
-            </div>
-          </div>
+          <img 
+            src="/assets/vital-track-logo.svg" 
+            alt="VitalTrack AI Logo" 
+            className="w-10 h-10 rounded-2xl shadow-lg shadow-orange-500/20 object-contain shrink-0" 
+          />
           <div>
             <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
               VitalTrack AI

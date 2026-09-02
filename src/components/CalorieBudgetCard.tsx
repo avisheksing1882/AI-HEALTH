@@ -18,17 +18,22 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
   onOpenAIScanner,
   onOpenManualLogger,
 }) => {
-  const caloriesEaten = meals.reduce((acc, m) => acc + m.totalCalories, 0);
-  const activeCaloriesBurned = activity.activeCaloriesBurned;
+  const caloriesEaten = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalCalories) || 0), 0));
+  const activeCaloriesBurned = Math.round(activity.activeCaloriesBurned || 0);
   const baseTarget = profile.calorieTarget;
   const netRemaining = baseTarget - caloriesEaten + activeCaloriesBurned;
 
-  const totalProtein = meals.reduce((acc, m) => acc + m.totalProtein, 0);
-  const totalCarbs = meals.reduce((acc, m) => acc + m.totalCarbs, 0);
-  const totalFat = meals.reduce((acc, m) => acc + m.totalFat, 0);
-  const totalFiber = meals.reduce((acc, m) => acc + m.totalFiber, 0);
-  const totalSugar = meals.reduce((acc, m) => acc + m.totalSugar, 0);
-  const totalSodium = meals.reduce((acc, m) => acc + m.totalSodium, 0);
+  const totalProtein = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalProtein) || 0), 0) * 10) / 10;
+  const totalCarbs = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalCarbs) || 0), 0) * 10) / 10;
+  const totalFat = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalFat) || 0), 0) * 10) / 10;
+  const totalFiber = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalFiber) || 0), 0) * 10) / 10;
+  const totalSugar = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalSugar) || 0), 0) * 10) / 10;
+  const totalSodium = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalSodium) || 0), 0));
+
+  const formatOneDecimal = (val: number | undefined | null): string => {
+    if (val === undefined || val === null || isNaN(Number(val))) return '0.0';
+    return (Math.round(Number(val) * 10) / 10).toFixed(1);
+  };
 
   const proteinPct = Math.min(150, Math.round((totalProtein / Math.max(1, profile.proteinGramsTarget)) * 100));
   const carbsPct = Math.min(150, Math.round((totalCarbs / Math.max(1, profile.carbsGramsTarget)) * 100));
@@ -166,7 +171,7 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{totalProtein}g</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatOneDecimal(totalProtein)}g</span>
               <span>/ {profile.proteinGramsTarget}g</span>
             </div>
           </div>
@@ -188,7 +193,7 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{totalCarbs}g</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatOneDecimal(totalCarbs)}g</span>
               <span>/ {profile.carbsGramsTarget}g</span>
             </div>
           </div>
@@ -210,7 +215,7 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{totalFat}g</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatOneDecimal(totalFat)}g</span>
               <span>/ {profile.fatGramsTarget}g</span>
             </div>
           </div>
@@ -232,7 +237,7 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
               />
             </div>
             <div className="flex justify-between text-[10px] text-slate-500">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{totalFiber}g</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatOneDecimal(totalFiber)}g</span>
               <span>/ {profile.fiberGramsTarget}g</span>
             </div>
           </div>
@@ -243,7 +248,7 @@ export const CalorieBudgetCard: React.FC<CalorieBudgetCardProps> = ({
         <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-500">
           <span>Micronutrients logged:</span>
           <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-obsidian-800 font-medium">
-            Sugar: <strong className="text-slate-700 dark:text-slate-300">{totalSugar}g</strong>
+            Sugar: <strong className="text-slate-700 dark:text-slate-300">{formatOneDecimal(totalSugar)}g</strong>
           </span>
           <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-obsidian-800 font-medium">
             Sodium: <strong className="text-slate-700 dark:text-slate-300">{totalSodium}mg</strong>

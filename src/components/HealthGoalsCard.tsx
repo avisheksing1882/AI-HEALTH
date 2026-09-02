@@ -45,11 +45,11 @@ export const HealthGoalsCard: React.FC<HealthGoalsCardProps> = ({
   const todayWorkoutMinutes = workouts.reduce((acc, w) => acc + (w.durationMinutes || 0), 0);
 
   // Compute total calories & macros consumed today
-  const totalCalories = meals.reduce((acc, m) => acc + m.totalCalories, 0);
-  const totalProtein = meals.reduce((acc, m) => acc + m.totalProtein, 0);
-  const totalCarbs = meals.reduce((acc, m) => acc + m.totalCarbs, 0);
-  const totalFat = meals.reduce((acc, m) => acc + m.totalFat, 0);
-  const totalFiber = meals.reduce((acc, m) => acc + m.totalFiber, 0);
+  const totalCalories = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalCalories) || 0), 0));
+  const totalProtein = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalProtein) || 0), 0) * 10) / 10;
+  const totalCarbs = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalCarbs) || 0), 0) * 10) / 10;
+  const totalFat = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalFat) || 0), 0) * 10) / 10;
+  const totalFiber = Math.round(meals.reduce((acc, m) => acc + (Number(m.totalFiber) || 0), 0) * 10) / 10;
   const currentWaterMl = Math.max(0, activity.waterMl || 0);
 
   // Calculate clinically verified personalized goals

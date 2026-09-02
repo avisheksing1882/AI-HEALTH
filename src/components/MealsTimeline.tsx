@@ -131,6 +131,11 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
 
+  const formatOneDecimal = (val: number | undefined | null): string => {
+    if (val === undefined || val === null || isNaN(Number(val))) return '0.0';
+    return (Math.round(Number(val) * 10) / 10).toFixed(1);
+  };
+
   const formatDateDisplay = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -500,17 +505,17 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                             {/* Macronutrients in dedicated pills */}
                             <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] font-bold">
                               <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                P: {meal.totalProtein}g
+                                P: {formatOneDecimal(meal.totalProtein)}g
                               </span>
                               <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                C: {meal.totalCarbs}g
+                                C: {formatOneDecimal(meal.totalCarbs)}g
                               </span>
                               <span className="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                                F: {meal.totalFat}g
+                                F: {formatOneDecimal(meal.totalFat)}g
                               </span>
                               {meal.totalFiber ? (
                                 <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                  Fib: {meal.totalFiber}g
+                                  Fib: {formatOneDecimal(meal.totalFiber)}g
                                 </span>
                               ) : null}
                             </div>
@@ -667,9 +672,9 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                         )}
                                       </div>
                                     </div>
-                                    <span className="text-[10px] text-slate-400 block">
-                                      {item.portionDescription} • P:{item.protein}g C:{item.carbs}g F:{item.fat}g
-                                    </span>
+                                     <span className="text-[10px] text-slate-400 block">
+                                       {item.portionDescription} • P:{formatOneDecimal(item.protein)}g C:{formatOneDecimal(item.carbs)}g F:{formatOneDecimal(item.fat)}g
+                                     </span>
 
                                     {/* Ingredient-specific Warning Accordion */}
                                     {itemEval.hasWarnings && (

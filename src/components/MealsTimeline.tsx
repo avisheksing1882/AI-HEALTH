@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
-import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers, Pencil, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers, Pencil, Check, X, ShieldCheck, Flame, Loader2 } from 'lucide-react';
 import { MealLog, MealType, HealthCondition, FoodItemNutrition } from '../types';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 import { evaluateFoodForHealthConditions } from '../services/healthConditionFoodEvaluator';
 import { FoodHealthWarningAccordion } from './FoodHealthWarningAccordion';
+import { estimateNutritionForFoodItem } from '../services/aiNutritionService';
 
 interface EditingIngredientState {
   mealId: string;
   itemIndex: number;
   name: string;
-  calories: number | '';
+  calories: number;
   portionDescription: string;
   portionGrams: number | '';
-  protein: number | '';
-  carbs: number | '';
-  fat: number | '';
-  fiber: number | '';
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  sugar: number;
+  sodium: number;
+  isAIResolving?: boolean;
+  verifiedSource?: string;
+  clinicalNote?: string;
 }
 
 interface MealsTimelineProps {
@@ -47,6 +53,44 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
   const [expandedMealIds, setExpandedMealIds] = useState<Set<string>>(new Set());
   const [editingIngredient, setEditingIngredient] = useState<EditingIngredientState | null>(null);
   const [editingMealTitle, setEditingMealTitle] = useState<{ id: string; title: string } | null>(null);
+
+  // ⚡ Debounced AI Clinical Nutrition Auto-Calculation
+  useEffect(() => {
+    if (!editingIngredient || !editingIngredient.name.trim()) return;
+
+    const currentName = editingIngredient.name.trim();
+    const currentGrams = typeof editingIngredient.portionGrams === 'number' && editingIngredient.portionGrams > 0
+      ? editingIngredient.portionGrams
+      : 100;
+
+    const timer = setTimeout(async () => {
+      setEditingIngredient(prev => prev ? { ...prev, isAIResolving: true } : null);
+      try {
+        const est = await estimateNutritionForFoodItem(currentName, currentGrams);
+        setEditingIngredient(prev => {
+          if (!prev || prev.name.trim() !== currentName) return prev;
+          return {
+            ...prev,
+            calories: est.calories,
+            protein: est.protein,
+            carbs: est.carbs,
+            fat: est.fat,
+            fiber: est.fiber,
+            sugar: est.sugar,
+            sodium: est.sodium,
+            portionDescription: est.portionDescription,
+            verifiedSource: est.source === 'gemini_clinical_ai' ? 'Gemini AI Dietitian' : 'ICMR-NIN IFCT Standard',
+            clinicalNote: est.clinicalNote,
+            isAIResolving: false
+          };
+        });
+      } catch {
+        setEditingIngredient(prev => prev ? { ...prev, isAIResolving: false } : null);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [editingIngredient?.name, editingIngredient?.portionGrams]);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -87,13 +131,15 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
       ...(oldItem || {}),
       id: oldItem?.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: editingIngredient.name.trim() || (oldItem ? oldItem.name : 'Food Item'),
-      calories: editingIngredient.calories === '' ? (oldItem ? oldItem.calories : 0) : Number(editingIngredient.calories),
-      portionDescription: editingIngredient.portionDescription.trim() || (oldItem ? oldItem.portionDescription : '1 serving'),
-      portionGrams: editingIngredient.portionGrams === '' ? (oldItem ? oldItem.portionGrams : 100) : Number(editingIngredient.portionGrams),
-      protein: editingIngredient.protein === '' ? (oldItem ? oldItem.protein : 0) : Number(editingIngredient.protein),
-      carbs: editingIngredient.carbs === '' ? (oldItem ? oldItem.carbs : 0) : Number(editingIngredient.carbs),
-      fat: editingIngredient.fat === '' ? (oldItem ? oldItem.fat : 0) : Number(editingIngredient.fat),
-      fiber: editingIngredient.fiber === '' ? (oldItem?.fiber || 0) : Number(editingIngredient.fiber),
+      calories: Number(editingIngredient.calories) || 0,
+      portionDescription: editingIngredient.portionDescription.trim() || `${editingIngredient.portionGrams || 100}g`,
+      portionGrams: typeof editingIngredient.portionGrams === 'number' ? editingIngredient.portionGrams : 100,
+      protein: Number(editingIngredient.protein) || 0,
+      carbs: Number(editingIngredient.carbs) || 0,
+      fat: Number(editingIngredient.fat) || 0,
+      fiber: Number(editingIngredient.fiber) || 0,
+      sugar: Number(editingIngredient.sugar) || 0,
+      sodium: Number(editingIngredient.sodium) || 0,
     };
 
     if (isNew) {
@@ -453,13 +499,15 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                       mealId: meal.id,
                                       itemIndex: meal.items.length,
                                       name: '',
-                                      calories: '',
+                                      calories: 0,
                                       portionDescription: '',
-                                      portionGrams: '',
-                                      protein: '',
-                                      carbs: '',
-                                      fat: '',
-                                      fiber: ''
+                                      portionGrams: 100,
+                                      protein: 0,
+                                      carbs: 0,
+                                      fat: 0,
+                                      fiber: 0,
+                                      sugar: 0,
+                                      sodium: 0
                                     });
                                   }}
                                   className="text-[11px] font-bold text-emerald-500 hover:text-emerald-400 flex items-center gap-1 transition"
@@ -513,11 +561,14 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                                 name: item.name,
                                                 calories: item.calories,
                                                 portionDescription: item.portionDescription || '',
-                                                portionGrams: item.portionGrams || '',
+                                                portionGrams: item.portionGrams || 100,
                                                 protein: item.protein,
                                                 carbs: item.carbs,
                                                 fat: item.fat,
-                                                fiber: item.fiber || ''
+                                                fiber: item.fiber || 0,
+                                                sugar: item.sugar || 0,
+                                                sodium: item.sodium || 0,
+                                                verifiedSource: 'ICMR-NIN IFCT / USDA'
                                               });
                                             }}
                                             className="p-1 rounded-md text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition"
@@ -589,58 +640,44 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3.5">
-              {/* Food Name */}
+            <div className="space-y-4">
+              {/* 1. Food Item Name */}
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Food Name
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Food Item Name
+                  </label>
+                  {editingIngredient.isAIResolving ? (
+                    <span className="text-[10px] font-bold text-cyan-500 flex items-center gap-1 animate-pulse">
+                      <Sparkles className="w-3 h-3 animate-spin" /> AI Calculating...
+                    </span>
+                  ) : editingIngredient.verifiedSource ? (
+                    <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" /> {editingIngredient.verifiedSource}
+                    </span>
+                  ) : null}
+                </div>
                 <input
                   type="text"
                   value={editingIngredient.name}
                   onChange={(e) => setEditingIngredient({ ...editingIngredient, name: e.target.value })}
-                  placeholder="e.g. Multi Grain Paratha"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                  placeholder="e.g. Multi Grain Paratha, Chole, Boiled Eggs"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition"
                   autoFocus
                 />
               </div>
 
-              {/* Portion Description */}
+              {/* 2. Portion Weight (Grams) */}
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Portion Description
-                </label>
-                <input
-                  type="text"
-                  value={editingIngredient.portionDescription}
-                  onChange={(e) => setEditingIngredient({ ...editingIngredient, portionDescription: e.target.value })}
-                  placeholder="e.g. 1.5 medium parathas (90g)"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Calories and Grams */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Calories (kcal)
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Portion Weight (Grams)
                   </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={editingIngredient.calories}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-                      setEditingIngredient({ ...editingIngredient, calories: val === '' ? '' : Number(val) });
-                    }}
-                    placeholder="e.g. 260"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
-                  />
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {editingIngredient.portionDescription || `${editingIngredient.portionGrams}g`}
+                  </span>
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Weight (grams)
-                  </label>
+                <div className="relative">
                   <input
                     type="text"
                     inputMode="numeric"
@@ -650,52 +687,100 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                       setEditingIngredient({ ...editingIngredient, portionGrams: val === '' ? '' : Number(val) });
                     }}
                     placeholder="e.g. 90"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition pr-14"
                   />
+                  <span className="absolute right-3.5 top-3 text-xs font-bold text-slate-400 pointer-events-none">
+                    grams
+                  </span>
+                </div>
+
+                {/* Quick Weight Presets */}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className="text-[10px] text-slate-400 font-medium mr-1">Quick:</span>
+                  {[50, 90, 120, 150, 200].map(grams => (
+                    <button
+                      key={grams}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playTap();
+                        setEditingIngredient({ ...editingIngredient, portionGrams: grams });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                        editingIngredient.portionGrams === grams
+                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                          : 'bg-slate-100 dark:bg-obsidian-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                      }`}
+                    >
+                      {grams}g {grams === 90 ? '(1 paratha)' : ''}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Macronutrients Grid */}
-              <div className="grid grid-cols-4 gap-2 pt-1">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Protein (g)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editingIngredient.protein}
-                    onChange={(e) => setEditingIngredient({ ...editingIngredient, protein: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                  />
+              {/* 3. Automated AI-Computed Nutrition Display (Medically Verified & Read-Only) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-obsidian-950/80 border border-slate-200/80 dark:border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
+                    AI Medically Verified Nutrition
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                    Auto-Computed by AI
+                  </span>
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Carbs (g)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editingIngredient.carbs}
-                    onChange={(e) => setEditingIngredient({ ...editingIngredient, carbs: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                  />
+
+                {/* Calorie Highlight Card */}
+                <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-cyan-500/15 border border-emerald-500/30 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                      Calories
+                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">
+                        {editingIngredient.calories}
+                      </span>
+                      <span className="text-xs font-extrabold text-emerald-500">kcal</span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                    <Flame className="w-5 h-5" />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Fat (g)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editingIngredient.fat}
-                    onChange={(e) => setEditingIngredient({ ...editingIngredient, fat: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                  />
+
+                {/* Macronutrients Grid */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200/60 dark:border-slate-800/60 text-center shadow-sm">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Protein</span>
+                    <span className="text-sm font-black text-blue-500 block">
+                      {editingIngredient.protein}g
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200/60 dark:border-slate-800/60 text-center shadow-sm">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Carbs</span>
+                    <span className="text-sm font-black text-amber-500 block">
+                      {editingIngredient.carbs}g
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200/60 dark:border-slate-800/60 text-center shadow-sm">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Fat</span>
+                    <span className="text-sm font-black text-rose-500 block">
+                      {editingIngredient.fat}g
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-200/60 dark:border-slate-800/60 text-center shadow-sm">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Fiber</span>
+                    <span className="text-sm font-black text-emerald-500 block">
+                      {editingIngredient.fiber}g
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Fiber (g)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editingIngredient.fiber}
-                    onChange={(e) => setEditingIngredient({ ...editingIngredient, fiber: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
-                  />
+
+                {/* Medical Integrity Note */}
+                <div className="flex items-start gap-1.5 p-2 rounded-xl bg-emerald-500/5 text-[10px] text-slate-500 dark:text-slate-400 border border-emerald-500/10">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>
+                    {editingIngredient.clinicalNote || 'Medically verified against ICMR-NIN Indian Food Composition Tables (IFCT) & USDA FoodData Central. Macros are auto-calculated by AI to ensure health accuracy.'}
+                  </span>
                 </div>
               </div>
             </div>

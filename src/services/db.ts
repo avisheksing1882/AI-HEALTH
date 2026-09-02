@@ -18,8 +18,11 @@ import {
   deleteMealFromCloud,
   syncDailyActivityToCloud,
   syncWorkoutToCloud,
+  deleteWorkoutFromCloud,
   syncWeightLogToCloud,
+  deleteWeightLogFromCloud,
   syncWaterLogToCloud,
+  deleteWaterLogFromCloud,
   syncMedicationToCloud,
   deleteMedicationFromCloud,
   syncMedicationLogToCloud,
@@ -563,6 +566,17 @@ export async function saveWorkoutLogWithCache(workout: WorkoutLog): Promise<void
 }
 
 /**
+ * Delete workout with dual-layer caching and cloud sync
+ */
+export async function deleteWorkoutLogWithCache(userId: string, workoutId: string): Promise<void> {
+  await db.workouts.delete(workoutId);
+  const cached = readFromLocalCache<WorkoutLog>(userId, 'workouts');
+  const filtered = cached.filter(w => w.id !== workoutId);
+  saveToLocalCache(userId, 'workouts', filtered);
+  deleteWorkoutFromCloud(userId, workoutId);
+}
+
+/**
  * Save weight log with dual-layer caching
  */
 export async function saveWeightLogWithCache(weight: WeightLog): Promise<void> {
@@ -576,6 +590,17 @@ export async function saveWeightLogWithCache(weight: WeightLog): Promise<void> {
 }
 
 /**
+ * Delete weight log with dual-layer caching and cloud sync
+ */
+export async function deleteWeightLogWithCache(userId: string, weightId: string): Promise<void> {
+  await db.weightLogs.delete(weightId);
+  const cached = readFromLocalCache<WeightLog>(userId, 'weightLogs');
+  const filtered = cached.filter(w => w.id !== weightId);
+  saveToLocalCache(userId, 'weightLogs', filtered);
+  deleteWeightLogFromCloud(userId, weightId);
+}
+
+/**
  * Save water log with dual-layer caching
  */
 export async function saveWaterLogWithCache(water: WaterLog): Promise<void> {
@@ -586,6 +611,17 @@ export async function saveWaterLogWithCache(water: WaterLog): Promise<void> {
   saveToLocalCache(water.userId, 'waterLogs', filtered);
   // Cloud sync
   syncWaterLogToCloud(water);
+}
+
+/**
+ * Delete water log with dual-layer caching and cloud sync
+ */
+export async function deleteWaterLogWithCache(userId: string, waterId: string): Promise<void> {
+  await db.waterLogs.delete(waterId);
+  const cached = readFromLocalCache<WaterLog>(userId, 'waterLogs');
+  const filtered = cached.filter(w => w.id !== waterId);
+  saveToLocalCache(userId, 'waterLogs', filtered);
+  deleteWaterLogFromCloud(userId, waterId);
 }
 
 /**

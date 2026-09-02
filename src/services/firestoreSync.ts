@@ -158,14 +158,29 @@ export function syncWorkoutToCloud(workout: WorkoutLog): void {
   safeSetDoc(['users', workout.userId, 'workouts', workout.id], { ...workout });
 }
 
+/** Delete a workout from Firestore */
+export function deleteWorkoutFromCloud(userId: string, workoutId: string): void {
+  safeDeleteDoc(['users', userId, 'workouts', workoutId]);
+}
+
 /** Sync a weight log to Firestore */
 export function syncWeightLogToCloud(weight: WeightLog): void {
   safeSetDoc(['users', weight.userId, 'weightLogs', weight.id], { ...weight });
 }
 
+/** Delete a weight log from Firestore */
+export function deleteWeightLogFromCloud(userId: string, weightId: string): void {
+  safeDeleteDoc(['users', userId, 'weightLogs', weightId]);
+}
+
 /** Sync a water log to Firestore */
 export function syncWaterLogToCloud(water: WaterLog): void {
   safeSetDoc(['users', water.userId, 'waterLogs', water.id], { ...water });
+}
+
+/** Delete a water log from Firestore */
+export function deleteWaterLogFromCloud(userId: string, waterId: string): void {
+  safeDeleteDoc(['users', userId, 'waterLogs', waterId]);
 }
 
 /** Sync a medication to Firestore */

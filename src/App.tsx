@@ -19,7 +19,9 @@ import {
   saveMealLogWithCache,
   deleteMealLogWithCache,
   saveWorkoutLogWithCache,
+  deleteWorkoutLogWithCache,
   saveWeightLogWithCache,
+  saveWaterLogWithCache,
   syncUserDataWithCache
 } from './services/db';
 import { pedometer } from './services/pedometer';
@@ -128,6 +130,34 @@ export function App() {
       setUnreadNotifs(list.filter(n => !n.read).length);
     });
     return () => notifsUnsub();
+  }, [profile?.id]);
+
+  // ☁️ Automatic background Firestore sync: runs continuously without asking the user
+  useEffect(() => {
+    if (!profile) return;
+
+    // Initial background sync
+    authService.triggerCloudSync(profile.id, profile);
+
+    // Periodic automatic background sync every 30 seconds
+    const syncInterval = setInterval(() => {
+      authService.triggerCloudSync(profile.id, profile);
+    }, 30000);
+
+    // Automatic sync whenever the user returns to the tab
+    const handleActive = () => {
+      if (document.visibilityState === 'visible') {
+        authService.triggerCloudSync(profile.id, profile);
+      }
+    };
+    document.addEventListener('visibilitychange', handleActive);
+    window.addEventListener('focus', handleActive);
+
+    return () => {
+      clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleActive);
+      window.removeEventListener('focus', handleActive);
+    };
   }, [profile?.id]);
 
   // Fire confetti when step goal is first reached in this session
@@ -280,7 +310,7 @@ export function App() {
   const handleDeleteWorkout = async (workoutId: string) => {
     if (!profile) return;
     const target = workouts.find(w => w.id === workoutId);
-    await db.workouts.delete(workoutId);
+    await deleteWorkoutLogWithCache(profile.id, workoutId);
     const updated = workouts.filter(w => w.id !== workoutId);
     setWorkouts(updated);
 
@@ -320,7 +350,7 @@ export function App() {
     const newTotal = Math.max(0, (activity.waterMl || 0) + deltaMl);
     const now = new Date();
     try {
-      await db.waterLogs.put({
+      await saveWaterLogWithCache({
         id: `water-${Date.now()}`,
         userId: profile.id,
         date: selectedDate,

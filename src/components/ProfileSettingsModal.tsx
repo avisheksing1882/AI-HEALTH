@@ -114,7 +114,15 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   // Live recalculated BMR, TDEE, and targets
   const liveBmr = calculateBMR(weightKg, heightCm, age, gender, healthConditions);
   const liveTdee = calculateTDEE(liveBmr, activityLevel);
-  const liveCalorieTarget = calculateCalorieTarget(liveTdee, fitnessGoal, gender);
+  const liveCalorieTarget = calculateCalorieTarget(
+    liveTdee,
+    fitnessGoal,
+    gender,
+    liveBmr,
+    weightKg,
+    heightCm,
+    healthConditions
+  );
   const liveMacros = calculateMacroTargets(liveCalorieTarget, weightKg, fitnessGoal, healthConditions);
   const liveHydration = calculateMedicallyAccurateHydration(weightKg, gender, age, activityLevel, 0, healthConditions);
 

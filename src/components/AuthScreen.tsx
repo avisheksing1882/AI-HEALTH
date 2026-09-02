@@ -168,7 +168,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
       {/* Footer */}
       <footer className="relative z-10 max-w-6xl mx-auto w-full px-6 py-6 text-center text-xs text-slate-500 border-t border-slate-900">
-        <p>VitalTrack AI &bull; Private Health Tracking with 1-Tap Google Auth</p>
+        <p>VitalTrack AI • Private Health Tracking with 1-Tap Google Auth</p>
       </footer>
 
     </div>

@@ -189,7 +189,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {weeklyWeightAnalysis.isWeighInDue
                   ? `It has been ${weeklyWeightAnalysis.daysSinceLastEntry === 999 ? 'over 7' : weeklyWeightAnalysis.daysSinceLastEntry} days since your last weigh-in. Step on the scale to update your trajectory!`
-                  : `Current: ${weeklyWeightAnalysis.lastWeightKg} kg &bull; Target: ${profile.targetWeightKg} kg &bull; ${weeklyWeightAnalysis.weeklyRateKgPerWeek !== 0 ? `${weeklyWeightAnalysis.weeklyRateKgPerWeek > 0 ? '+' : ''}${weeklyWeightAnalysis.weeklyRateKgPerWeek} kg/wk` : 'Stable'}`}
+                  : `Current: ${weeklyWeightAnalysis.lastWeightKg} kg • Target: ${profile.targetWeightKg} kg • ${weeklyWeightAnalysis.weeklyRateKgPerWeek !== 0 ? `${weeklyWeightAnalysis.weeklyRateKgPerWeek > 0 ? '+' : ''}${weeklyWeightAnalysis.weeklyRateKgPerWeek} kg/wk` : 'Stable'}`}
               </p>
 
               {weeklyWeightAnalysis.projectedGoalDate && (

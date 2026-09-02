@@ -325,7 +325,7 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                         {entry.name}
                       </span>
                       <span className="text-[11px] text-slate-500">
-                        {entry.portionDescription} &bull; {Math.round(entry.caloriesPer100g * (entry.defaultPortionGrams / 100))} kcal &bull; P: {(entry.proteinPer100g * (entry.defaultPortionGrams / 100)).toFixed(1)}g
+                        {entry.portionDescription} • {Math.round(entry.caloriesPer100g * (entry.defaultPortionGrams / 100))} kcal • P: {(entry.proteinPer100g * (entry.defaultPortionGrams / 100)).toFixed(1)}g
                       </span>
                     </div>
 

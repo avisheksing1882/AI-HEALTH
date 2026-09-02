@@ -267,7 +267,7 @@ export const AIWorkoutEstimatorCard: React.FC<AIWorkoutEstimatorCardProps> = ({
                   >
                     <div>
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">{item.name}</span>
-                      <span className="text-[10px] text-slate-400">{item.durationMinutes} mins &bull; {item.metValue} MET</span>
+                      <span className="text-[10px] text-slate-400">{item.durationMinutes} mins • {item.metValue} MET</span>
                     </div>
                     <span className="font-black text-emerald-600 dark:text-emerald-400">
                       +{item.caloriesBurned} kcal

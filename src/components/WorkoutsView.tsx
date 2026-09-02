@@ -157,7 +157,7 @@ export const WorkoutsView: React.FC<WorkoutsViewProps> = ({
                 Today's Workout Sessions
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {workouts.length} sessions &bull; {totalWorkoutMinutes} mins total &bull; {totalWorkoutCalories} kcal burned
+                {workouts.length} sessions • {totalWorkoutMinutes} mins total • {totalWorkoutCalories} kcal burned
               </p>
             </div>
           </div>

@@ -313,7 +313,7 @@ export const HistoryCalendarView: React.FC<HistoryCalendarViewProps> = ({
                   <div key={meal.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">{meal.title}</span>
-                      <span className="text-[10px] text-slate-400">{meal.time} &bull; P:{meal.totalProtein}g C:{meal.totalCarbs}g F:{meal.totalFat}g</span>
+                      <span className="text-[10px] text-slate-400">{meal.time} • P:{meal.totalProtein}g C:{meal.totalCarbs}g F:{meal.totalFat}g</span>
                     </div>
                     <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100">{meal.totalCalories} kcal</span>
                   </div>
@@ -345,7 +345,7 @@ export const HistoryCalendarView: React.FC<HistoryCalendarViewProps> = ({
                   <div key={w.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">{w.title}</span>
-                      <span className="text-[10px] text-slate-400">{w.durationMinutes} mins &bull; {w.intensity}</span>
+                      <span className="text-[10px] text-slate-400">{w.durationMinutes} mins • {w.intensity}</span>
                     </div>
                     <span className="text-xs font-extrabold text-emerald-500">{w.caloriesBurned} kcal</span>
                   </div>

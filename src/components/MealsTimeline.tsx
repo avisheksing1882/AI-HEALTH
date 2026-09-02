@@ -199,11 +199,11 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                               </div>
                               <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 flex-wrap">
                                 <span>{meal.time}</span>
-                                <span>&bull;</span>
+                                <span>•</span>
                                 <span>P: {meal.totalProtein}g</span>
                                 <span>C: {meal.totalCarbs}g</span>
                                 <span>F: {meal.totalFat}g</span>
-                                {meal.totalFiber ? <span>&bull; Fib: {meal.totalFiber}g</span> : null}
+                                {meal.totalFiber ? <span>• Fib: {meal.totalFiber}g</span> : null}
                               </div>
 
                               {/* One-Click Fix: Move morning scan to Breakfast */}
@@ -314,7 +314,7 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                       </span>
                                     </div>
                                     <span className="text-[10px] text-slate-400 block">
-                                      {item.portionDescription} &bull; P:{item.protein}g C:{item.carbs}g F:{item.fat}g
+                                      {item.portionDescription} • P:{item.protein}g C:{item.carbs}g F:{item.fat}g
                                     </span>
 
                                     {/* Ingredient-specific Warning Accordion */}

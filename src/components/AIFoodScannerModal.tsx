@@ -1014,11 +1014,11 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                               />
                               <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                                 <span>{item.portionGrams}g</span>
-                                <span>&bull;</span>
+                                <span>•</span>
                                 <span>P: {item.protein}g</span>
                                 <span>C: {item.carbs}g</span>
                                 <span>F: {item.fat}g</span>
-                                {item.fiber ? <span>&bull; Fib: {item.fiber}g</span> : null}
+                                {item.fiber ? <span>• Fib: {item.fiber}g</span> : null}
                               </div>
                             </div>
                           </div>

@@ -247,7 +247,7 @@ export const StepTrackerCard: React.FC<StepTrackerCardProps> = ({
                 {/* Tooltip */}
                 <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
                   <div className="bg-slate-900 text-white text-[9px] font-mono py-1 px-1.5 rounded shadow-lg whitespace-nowrap">
-                    {hour}:00 &bull; {stepsInHour} steps
+                    {hour}:00 • {stepsInHour} steps
                   </div>
                 </div>
               </div>

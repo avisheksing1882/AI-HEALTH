@@ -110,6 +110,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </span>
               )}
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {isToday 
+                ? `Your daily metabolic overview • Goal: `
+                : `Past historical log • Goal: `}
+              <strong className="text-emerald-500 font-semibold capitalize">{profile.fitnessGoal.replace('_', ' ')}</strong>
+            </p>
           </div>
 
         {/* Quick Log Action Bar */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   User, 
@@ -94,36 +94,73 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   onLogout
 }) => {
   const [name, setName] = useState(profile.name);
-  const [age, setAge] = useState(profile.age);
+  const [age, setAge] = useState<number | ''>(profile.age);
   const [gender, setGender] = useState<Gender>(profile.gender);
-  const [heightCm, setHeightCm] = useState(profile.heightCm);
-  const [weightKg, setWeightKg] = useState(profile.weightKg);
-  const [targetWeightKg, setTargetWeightKg] = useState(profile.targetWeightKg);
+  const [heightCm, setHeightCm] = useState<number | ''>(profile.heightCm);
+  const [weightKg, setWeightKg] = useState<number | ''>(profile.weightKg);
+  const [targetWeightKg, setTargetWeightKg] = useState<number | ''>(profile.targetWeightKg);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>(profile.fitnessGoal);
   const [healthConditions, setHealthConditions] = useState<HealthCondition[]>(profile.healthConditions || []);
-  const [dailyStepGoal, setDailyStepGoal] = useState(profile.dailyStepGoal);
-  const [dailyWaterGoalMl, setDailyWaterGoalMl] = useState(profile.dailyWaterGoalMl);
-  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(profile.workoutDaysPerWeek || 4);
+  const [dailyStepGoal, setDailyStepGoal] = useState<number | ''>(profile.dailyStepGoal);
+  const [dailyWaterGoalMl, setDailyWaterGoalMl] = useState<number | ''>(profile.dailyWaterGoalMl);
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState<number | ''>(profile.workoutDaysPerWeek || 4);
   const [soundEnabled, setSoundEnabled] = useState(profile.soundEnabled);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Sync state whenever modal opens or profile changes
+  useEffect(() => {
+    if (isOpen) {
+      setName(profile.name);
+      setAge(profile.age);
+      setGender(profile.gender);
+      setHeightCm(profile.heightCm);
+      setWeightKg(profile.weightKg);
+      setTargetWeightKg(profile.targetWeightKg);
+      setActivityLevel(profile.activityLevel);
+      setFitnessGoal(profile.fitnessGoal);
+      setHealthConditions(profile.healthConditions || []);
+      setDailyStepGoal(profile.dailyStepGoal);
+      setDailyWaterGoalMl(profile.dailyWaterGoalMl);
+      setWorkoutDaysPerWeek(profile.workoutDaysPerWeek || 4);
+      setSoundEnabled(profile.soundEnabled);
+    }
+  }, [isOpen, profile]);
+
+  // Clean numeric inputs: strips any leading zero before another digit (e.g. "068" -> 68, "025" -> 25)
+  const cleanNumberInput = (rawVal: string, isFloat = false): number | '' => {
+    if (rawVal === '') return '';
+    // Strip leading zero when followed by a digit: e.g. "068" -> "68", "00" -> "0"
+    let cleaned = rawVal;
+    if (/^0[0-9]/.test(cleaned)) {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '') cleaned = '0';
+    }
+    const num = isFloat ? parseFloat(cleaned) : parseInt(cleaned, 10);
+    return isNaN(num) ? '' : num;
+  };
+
   if (!isOpen) return null;
 
+  // Numeric fallbacks for live calculations
+  const numericWeight = typeof weightKg === 'number' && weightKg > 0 ? weightKg : profile.weightKg;
+  const numericHeight = typeof heightCm === 'number' && heightCm > 0 ? heightCm : profile.heightCm;
+  const numericAge = typeof age === 'number' && age > 0 ? age : profile.age;
+
   // Live recalculated BMR, TDEE, and targets
-  const liveBmr = calculateBMR(weightKg, heightCm, age, gender, healthConditions);
+  const liveBmr = calculateBMR(numericWeight, numericHeight, numericAge, gender, healthConditions);
   const liveTdee = calculateTDEE(liveBmr, activityLevel);
   const liveCalorieTarget = calculateCalorieTarget(
     liveTdee,
     fitnessGoal,
     gender,
     liveBmr,
-    weightKg,
-    heightCm,
+    numericWeight,
+    numericHeight,
     healthConditions
   );
-  const liveMacros = calculateMacroTargets(liveCalorieTarget, weightKg, fitnessGoal, healthConditions);
-  const liveHydration = calculateMedicallyAccurateHydration(weightKg, gender, age, activityLevel, 0, healthConditions);
+  const liveMacros = calculateMacroTargets(liveCalorieTarget, numericWeight, fitnessGoal, healthConditions);
+  const liveHydration = calculateMedicallyAccurateHydration(numericWeight, gender, numericAge, activityLevel, 0, healthConditions);
 
   const toggleHealthCondition = (condId: HealthCondition) => {
     soundFx.playTap();
@@ -142,19 +179,27 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
 
     soundFx.setMuted(!soundEnabled);
 
+    const finalAge = typeof age === 'number' && age > 0 ? age : profile.age;
+    const finalHeight = typeof heightCm === 'number' && heightCm > 0 ? heightCm : profile.heightCm;
+    const finalWeight = typeof weightKg === 'number' && weightKg > 0 ? weightKg : profile.weightKg;
+    const finalTargetWeight = typeof targetWeightKg === 'number' && targetWeightKg > 0 ? targetWeightKg : profile.targetWeightKg;
+    const finalStepGoal = typeof dailyStepGoal === 'number' && dailyStepGoal > 0 ? dailyStepGoal : profile.dailyStepGoal;
+    const finalWaterGoal = typeof dailyWaterGoalMl === 'number' && dailyWaterGoalMl > 0 ? dailyWaterGoalMl : profile.dailyWaterGoalMl;
+    const finalWorkoutDays = typeof workoutDaysPerWeek === 'number' && workoutDaysPerWeek > 0 ? workoutDaysPerWeek : (profile.workoutDaysPerWeek || 4);
+
     const updated = await saveUserProfile(profile.id, {
       name: name.trim(),
-      age,
+      age: finalAge,
       gender,
-      heightCm,
-      weightKg,
-      targetWeightKg,
+      heightCm: finalHeight,
+      weightKg: finalWeight,
+      targetWeightKg: finalTargetWeight,
       activityLevel,
       fitnessGoal,
       healthConditions,
-      dailyStepGoal,
-      dailyWaterGoalMl,
-      workoutDaysPerWeek,
+      dailyStepGoal: finalStepGoal,
+      dailyWaterGoalMl: finalWaterGoal,
+      workoutDaysPerWeek: finalWorkoutDays,
       bmr: liveBmr,
       tdee: liveTdee,
       calorieTarget: liveCalorieTarget,
@@ -274,7 +319,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={age}
                   min={12}
                   max={100}
-                  onChange={(e) => setAge(Number(e.target.value))}
+                  placeholder="e.g. 28"
+                  onChange={(e) => setAge(cleanNumberInput(e.target.value, false))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
@@ -300,7 +346,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={heightCm}
                   min={100}
                   max={250}
-                  onChange={(e) => setHeightCm(Number(e.target.value))}
+                  placeholder="e.g. 175"
+                  onChange={(e) => setHeightCm(cleanNumberInput(e.target.value, false))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
@@ -314,7 +361,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={weightKg}
                   min={30}
                   max={300}
-                  onChange={(e) => setWeightKg(Number(e.target.value))}
+                  placeholder="e.g. 70"
+                  onChange={(e) => setWeightKg(cleanNumberInput(e.target.value, true))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
@@ -328,7 +376,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={targetWeightKg}
                   min={30}
                   max={300}
-                  onChange={(e) => setTargetWeightKg(Number(e.target.value))}
+                  placeholder="e.g. 68"
+                  onChange={(e) => setTargetWeightKg(cleanNumberInput(e.target.value, true))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
@@ -428,7 +477,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={dailyStepGoal}
                   min={1000}
                   max={50000}
-                  onChange={(e) => setDailyStepGoal(Number(e.target.value))}
+                  placeholder="e.g. 8000"
+                  onChange={(e) => setDailyStepGoal(cleanNumberInput(e.target.value, false))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
@@ -451,7 +501,8 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   value={dailyWaterGoalMl}
                   min={1000}
                   max={6000}
-                  onChange={(e) => setDailyWaterGoalMl(Number(e.target.value))}
+                  placeholder="e.g. 3000"
+                  onChange={(e) => setDailyWaterGoalMl(cleanNumberInput(e.target.value, false))}
                   className="w-full bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />

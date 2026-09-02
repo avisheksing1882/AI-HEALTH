@@ -376,8 +376,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                     type="number"
                     min="0"
                     max="5000"
+                    placeholder="350"
                     value={customCalories}
-                    onChange={(e) => setCustomCalories(e.target.value)}
+                    onChange={(e) => setCustomCalories(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-sm"
                   />
                 </div>
@@ -390,8 +391,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                     type="number"
                     step="0.1"
                     min="0"
+                    placeholder="15"
                     value={customProtein}
-                    onChange={(e) => setCustomProtein(e.target.value)}
+                    onChange={(e) => setCustomProtein(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs"
                   />
                 </div>
@@ -404,8 +406,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                     type="number"
                     step="0.1"
                     min="0"
+                    placeholder="45"
                     value={customCarbs}
-                    onChange={(e) => setCustomCarbs(e.target.value)}
+                    onChange={(e) => setCustomCarbs(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs"
                   />
                 </div>
@@ -418,8 +421,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                     type="number"
                     step="0.1"
                     min="0"
+                    placeholder="10"
                     value={customFat}
-                    onChange={(e) => setCustomFat(e.target.value)}
+                    onChange={(e) => setCustomFat(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs"
                   />
                 </div>
@@ -432,8 +436,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                     type="number"
                     step="0.1"
                     min="0"
+                    placeholder="4"
                     value={customFiber}
-                    onChange={(e) => setCustomFiber(e.target.value)}
+                    onChange={(e) => setCustomFiber(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs"
                   />
                 </div>
@@ -445,8 +450,9 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                   <input
                     type="number"
                     min="1"
+                    placeholder="200"
                     value={customGrams}
-                    onChange={(e) => setCustomGrams(e.target.value)}
+                    onChange={(e) => setCustomGrams(e.target.value.replace(/^0+(?=\d)/, ''))}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs"
                   />
                 </div>
@@ -528,7 +534,10 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                         <input
                           type="number"
                           value={item.calories}
-                          onChange={(e) => handleUpdateItemProperty(index, 'calories', Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/^0+(?=\d)/, '');
+                            handleUpdateItemProperty(index, 'calories', val === '' ? 0 : Number(val));
+                          }}
                           className="w-full px-2 py-1 rounded-lg bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-center font-bold"
                         />
                       </div>
@@ -537,7 +546,10 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                         <input
                           type="number"
                           value={item.portionGrams}
-                          onChange={(e) => handleUpdateItemProperty(index, 'portionGrams', Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/^0+(?=\d)/, '');
+                            handleUpdateItemProperty(index, 'portionGrams', val === '' ? 0 : Number(val));
+                          }}
                           className="w-full px-2 py-1 rounded-lg bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-center font-semibold"
                         />
                       </div>
@@ -547,7 +559,10 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                           type="number"
                           step="0.1"
                           value={item.protein}
-                          onChange={(e) => handleUpdateItemProperty(index, 'protein', Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/^0+(?=\d)/, '');
+                            handleUpdateItemProperty(index, 'protein', val === '' ? 0 : Number(val));
+                          }}
                           className="w-full px-2 py-1 rounded-lg bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-center font-semibold"
                         />
                       </div>
@@ -557,7 +572,10 @@ export const FoodLoggerModal: React.FC<FoodLoggerModalProps> = ({
                           type="number"
                           step="0.1"
                           value={item.carbs}
-                          onChange={(e) => handleUpdateItemProperty(index, 'carbs', Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/^0+(?=\d)/, '');
+                            handleUpdateItemProperty(index, 'carbs', val === '' ? 0 : Number(val));
+                          }}
                           className="w-full px-2 py-1 rounded-lg bg-white dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 text-center font-semibold"
                         />
                       </div>

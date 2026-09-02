@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Scale, Check, TrendingDown, Target } from 'lucide-react';
 import { UserProfile, WeightLog } from '../types';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
@@ -18,13 +18,20 @@ export const WeightLoggerModal: React.FC<WeightLoggerModalProps> = ({
   selectedDate,
   profile,
 }) => {
-  const [weightKg, setWeightKg] = useState<number>(profile.weightKg || 65);
+  const [weightKg, setWeightKg] = useState<number | ''>(profile.weightKg || 65);
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setWeightKg(profile.weightKg || 65);
+    }
+  }, [isOpen, profile.weightKg]);
 
   if (!isOpen) return null;
 
+  const numericWeight = typeof weightKg === 'number' && weightKg > 0 ? weightKg : profile.weightKg;
   const heightM = profile.heightCm / 100;
-  const bmi = Number((weightKg / (heightM * heightM)).toFixed(1));
+  const bmi = Number((numericWeight / (heightM * heightM)).toFixed(1));
 
   const getBmiCategory = (val: number) => {
     if (val < 18.5) return { label: 'Underweight', color: 'text-amber-500 bg-amber-500/10' };
@@ -34,7 +41,7 @@ export const WeightLoggerModal: React.FC<WeightLoggerModalProps> = ({
   };
 
   const bmiCat = getBmiCategory(bmi);
-  const diffToTarget = Number((weightKg - profile.targetWeightKg).toFixed(1));
+  const diffToTarget = Number((numericWeight - profile.targetWeightKg).toFixed(1));
 
   const handleSave = () => {
     soundFx.playRingCelebration();
@@ -46,7 +53,7 @@ export const WeightLoggerModal: React.FC<WeightLoggerModalProps> = ({
       userId: profile.id,
       date: selectedDate,
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-      weightKg,
+      weightKg: numericWeight,
       bmi,
       notes: notes.trim() || undefined,
     };
@@ -93,7 +100,10 @@ export const WeightLoggerModal: React.FC<WeightLoggerModalProps> = ({
             </label>
             <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => setWeightKg(prev => Number((prev - 0.1).toFixed(1)))}
+                onClick={() => setWeightKg(prev => {
+                  const base = typeof prev === 'number' ? prev : (profile.weightKg || 65);
+                  return Number((base - 0.1).toFixed(1));
+                })}
                 className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-obsidian-800 text-lg font-bold text-slate-700 dark:text-slate-200"
               >
                 -
@@ -104,13 +114,27 @@ export const WeightLoggerModal: React.FC<WeightLoggerModalProps> = ({
                 step="0.1"
                 min="30"
                 max="250"
+                placeholder="65"
                 value={weightKg}
-                onChange={(e) => setWeightKg(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setWeightKg('');
+                    return;
+                  }
+                  let clean = val;
+                  if (/^0[0-9]/.test(clean)) clean = clean.replace(/^0+/, '');
+                  const num = parseFloat(clean);
+                  setWeightKg(isNaN(num) ? '' : num);
+                }}
                 className="w-32 text-center text-4xl font-black bg-transparent border-b-2 border-purple-500 focus:outline-none text-slate-900 dark:text-white"
               />
 
               <button
-                onClick={() => setWeightKg(prev => Number((prev + 0.1).toFixed(1)))}
+                onClick={() => setWeightKg(prev => {
+                  const base = typeof prev === 'number' ? prev : (profile.weightKg || 65);
+                  return Number((base + 0.1).toFixed(1));
+                })}
                 className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-obsidian-800 text-lg font-bold text-slate-700 dark:text-slate-200"
               >
                 +

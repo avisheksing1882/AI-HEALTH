@@ -243,7 +243,7 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
               <input
                 type="number"
                 value={manualTotalInput}
-                onChange={(e) => setManualTotalInput(e.target.value)}
+                onChange={(e) => setManualTotalInput(e.target.value.replace(/^0+(?=\d)/, ''))}
                 placeholder="Enter exact total ml (e.g. 1500)"
                 min="0"
                 max="10000"

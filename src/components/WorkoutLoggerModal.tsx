@@ -386,9 +386,11 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
                     type="number"
                     min="1"
                     max="300"
-                    value={manualDuration}
+                    placeholder="30"
+                    value={manualDuration === 0 ? '' : manualDuration}
                     onChange={(e) => {
-                      const mins = Number(e.target.value);
+                      const clean = e.target.value.replace(/^0+(?=\d)/, '');
+                      const mins = clean === '' ? 0 : Number(clean);
                       setManualDuration(mins);
                       updateManualCalories(selectedType, mins, intensity);
                     }}
@@ -402,8 +404,12 @@ export const WorkoutLoggerModal: React.FC<WorkoutLoggerModalProps> = ({
                   </label>
                   <input
                     type="number"
-                    value={manualCalories}
-                    onChange={(e) => setManualCalories(Number(e.target.value))}
+                    placeholder="150"
+                    value={manualCalories === 0 ? '' : manualCalories}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/^0+(?=\d)/, '');
+                      setManualCalories(clean === '' ? 0 : Number(clean));
+                    }}
                     className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-emerald-500"
                   />
                 </div>

@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   PenLine,
+  Pencil,
   UploadCloud,
   FileText
 } from 'lucide-react';
@@ -1006,12 +1007,16 @@ export const AIFoodScannerModal: React.FC<AIFoodScannerModalProps> = ({
                                 : 'bg-emerald-500'
                             }`} />
                             <div className="flex-1">
-                              <input
-                                type="text"
-                                value={item.name}
-                                onChange={(e) => handleUpdateItemName(index, e.target.value)}
-                                className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent hover:border-slate-400 focus:border-emerald-500 focus:outline-none w-full"
-                              />
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => handleUpdateItemName(index, e.target.value)}
+                                  className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-slate-100/60 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-0.5 hover:border-emerald-500 focus:border-emerald-500 focus:outline-none w-full transition"
+                                  title="Tap to rename this food item"
+                                />
+                                <Pencil className="w-3 h-3 text-slate-400 shrink-0" />
+                              </div>
                               <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                                 <span>{item.portionGrams}g</span>
                                 <span>•</span>

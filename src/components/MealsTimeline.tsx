@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers } from 'lucide-react';
-import { MealLog, MealType, HealthCondition } from '../types';
+import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Camera, Layers, Pencil, Check, X } from 'lucide-react';
+import { MealLog, MealType, HealthCondition, FoodItemNutrition } from '../types';
 import { soundFx, triggerHaptic } from '../services/soundEffects';
 import { evaluateFoodForHealthConditions } from '../services/healthConditionFoodEvaluator';
 import { FoodHealthWarningAccordion } from './FoodHealthWarningAccordion';
+
+interface EditingIngredientState {
+  mealId: string;
+  itemIndex: number;
+  name: string;
+  calories: number | '';
+  portionDescription: string;
+  portionGrams: number | '';
+  protein: number | '';
+  carbs: number | '';
+  fat: number | '';
+  fiber: number | '';
+}
 
 interface MealsTimelineProps {
   meals: MealLog[];
@@ -32,6 +45,8 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
   onOpenManualLogger,
 }) => {
   const [expandedMealIds, setExpandedMealIds] = useState<Set<string>>(new Set());
+  const [editingIngredient, setEditingIngredient] = useState<EditingIngredientState | null>(null);
+  const [editingMealTitle, setEditingMealTitle] = useState<{ id: string; title: string } | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -56,6 +71,105 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
     soundFx.playTap();
     triggerHaptic();
     onDeleteMeal(id);
+  };
+
+  const handleSaveEditedIngredient = () => {
+    if (!editingIngredient || !onUpdateMeal) return;
+
+    const targetMeal = meals.find(m => m.id === editingIngredient.mealId);
+    if (!targetMeal) return;
+
+    const newItems = [...targetMeal.items];
+    const isNew = editingIngredient.itemIndex >= newItems.length;
+    const oldItem = isNew ? null : newItems[editingIngredient.itemIndex];
+
+    const updatedItem: FoodItemNutrition = {
+      ...(oldItem || {}),
+      id: oldItem?.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: editingIngredient.name.trim() || (oldItem ? oldItem.name : 'Food Item'),
+      calories: editingIngredient.calories === '' ? (oldItem ? oldItem.calories : 0) : Number(editingIngredient.calories),
+      portionDescription: editingIngredient.portionDescription.trim() || (oldItem ? oldItem.portionDescription : '1 serving'),
+      portionGrams: editingIngredient.portionGrams === '' ? (oldItem ? oldItem.portionGrams : 100) : Number(editingIngredient.portionGrams),
+      protein: editingIngredient.protein === '' ? (oldItem ? oldItem.protein : 0) : Number(editingIngredient.protein),
+      carbs: editingIngredient.carbs === '' ? (oldItem ? oldItem.carbs : 0) : Number(editingIngredient.carbs),
+      fat: editingIngredient.fat === '' ? (oldItem ? oldItem.fat : 0) : Number(editingIngredient.fat),
+      fiber: editingIngredient.fiber === '' ? (oldItem?.fiber || 0) : Number(editingIngredient.fiber),
+    };
+
+    if (isNew) {
+      newItems.push(updatedItem);
+    } else {
+      newItems[editingIngredient.itemIndex] = updatedItem;
+    }
+
+    const totalCalories = newItems.reduce((acc, i) => acc + (Number(i.calories) || 0), 0);
+    const totalProtein = Math.round(newItems.reduce((acc, i) => acc + (Number(i.protein) || 0), 0) * 10) / 10;
+    const totalCarbs = Math.round(newItems.reduce((acc, i) => acc + (Number(i.carbs) || 0), 0) * 10) / 10;
+    const totalFat = Math.round(newItems.reduce((acc, i) => acc + (Number(i.fat) || 0), 0) * 10) / 10;
+    const totalFiber = Math.round(newItems.reduce((acc, i) => acc + (Number(i.fiber) || 0), 0) * 10) / 10;
+
+    // Also update meal title if it referenced the old food name
+    let updatedTitle = targetMeal.title;
+    if (oldItem && oldItem.name && updatedItem.name !== oldItem.name && targetMeal.title.toLowerCase().includes(oldItem.name.toLowerCase())) {
+      const reg = new RegExp(oldItem.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      updatedTitle = updatedTitle.replace(reg, updatedItem.name);
+    }
+
+    const updatedMeal: MealLog = {
+      ...targetMeal,
+      title: updatedTitle,
+      items: newItems,
+      totalCalories,
+      totalProtein,
+      totalCarbs,
+      totalFat,
+      totalFiber,
+      userModified: true
+    };
+
+    soundFx.playSuccessChime();
+    triggerHaptic();
+    onUpdateMeal(updatedMeal);
+    setEditingIngredient(null);
+  };
+
+  const handleDeleteIngredientFromMeal = (mealId: string, itemIdx: number) => {
+    if (!onUpdateMeal) return;
+    const targetMeal = meals.find(m => m.id === mealId);
+    if (!targetMeal) return;
+
+    const newItems = targetMeal.items.filter((_, i) => i !== itemIdx);
+    const totalCalories = newItems.reduce((acc, i) => acc + (Number(i.calories) || 0), 0);
+    const totalProtein = Math.round(newItems.reduce((acc, i) => acc + (Number(i.protein) || 0), 0) * 10) / 10;
+    const totalCarbs = Math.round(newItems.reduce((acc, i) => acc + (Number(i.carbs) || 0), 0) * 10) / 10;
+    const totalFat = Math.round(newItems.reduce((acc, i) => acc + (Number(i.fat) || 0), 0) * 10) / 10;
+    const totalFiber = Math.round(newItems.reduce((acc, i) => acc + (Number(i.fiber) || 0), 0) * 10) / 10;
+
+    const updatedMeal: MealLog = {
+      ...targetMeal,
+      items: newItems,
+      totalCalories,
+      totalProtein,
+      totalCarbs,
+      totalFat,
+      totalFiber,
+      userModified: true
+    };
+
+    soundFx.playSuccessChime();
+    triggerHaptic();
+    onUpdateMeal(updatedMeal);
+    setEditingIngredient(null);
+  };
+
+  const handleSaveMealTitle = () => {
+    if (!editingMealTitle || !onUpdateMeal) return;
+    const targetMeal = meals.find(m => m.id === editingMealTitle.id);
+    if (!targetMeal) return;
+    onUpdateMeal({ ...targetMeal, title: editingMealTitle.title.trim() || targetMeal.title, userModified: true });
+    soundFx.playSuccessChime();
+    triggerHaptic();
+    setEditingMealTitle(null);
   };
 
   return (
@@ -188,9 +302,57 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
 
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                                  {meal.title}
-                                </span>
+                                {editingMealTitle?.id === meal.id ? (
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="text"
+                                      value={editingMealTitle.title}
+                                      onChange={(e) => setEditingMealTitle({ ...editingMealTitle, title: e.target.value })}
+                                      className="text-xs font-bold text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-obsidian-950 border border-emerald-500 focus:outline-none"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveMealTitle();
+                                        if (e.key === 'Escape') setEditingMealTitle(null);
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveMealTitle}
+                                      className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition"
+                                      title="Save title"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingMealTitle(null)}
+                                      className="p-1 rounded text-slate-400 hover:text-slate-600 transition"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                      {meal.title}
+                                    </span>
+                                    {onUpdateMeal && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          soundFx.playTap();
+                                          setEditingMealTitle({ id: meal.id, title: meal.title });
+                                        }}
+                                        className="p-0.5 rounded text-slate-400 hover:text-emerald-500 transition"
+                                        title="Rename meal title"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </>
+                                )}
                                 {meal.aiAnalyzed && (
                                   <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-500 font-bold border border-cyan-500/20 flex items-center gap-0.5">
                                     <Sparkles className="w-2.5 h-2.5" /> AI
@@ -277,9 +439,35 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                         {/* Expanded Item Breakdown */}
                         {isExpanded && meal.items && meal.items.length > 0 && (
                           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                              Decomposed Ingredients ({meal.items.length}):
-                            </span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Decomposed Ingredients ({meal.items.length}):
+                              </span>
+                              {onUpdateMeal && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    soundFx.playTap();
+                                    setEditingIngredient({
+                                      mealId: meal.id,
+                                      itemIndex: meal.items.length,
+                                      name: '',
+                                      calories: '',
+                                      portionDescription: '',
+                                      portionGrams: '',
+                                      protein: '',
+                                      carbs: '',
+                                      fat: '',
+                                      fiber: ''
+                                    });
+                                  }}
+                                  className="text-[11px] font-bold text-emerald-500 hover:text-emerald-400 flex items-center gap-1 transition"
+                                >
+                                  <Plus className="w-3 h-3" /> Add Item
+                                </button>
+                              )}
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {meal.items.map((item, idx) => {
                                 const itemEval = evaluateFoodForHealthConditions({
@@ -309,9 +497,36 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
                                       <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">
                                         {item.name}
                                       </span>
-                                      <span className="font-black text-slate-900 dark:text-white shrink-0 ml-1">
-                                        {item.calories} kcal
-                                      </span>
+                                      <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                                        <span className="font-black text-slate-900 dark:text-white">
+                                          {item.calories} kcal
+                                        </span>
+                                        {onUpdateMeal && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              soundFx.playTap();
+                                              setEditingIngredient({
+                                                mealId: meal.id,
+                                                itemIndex: idx,
+                                                name: item.name,
+                                                calories: item.calories,
+                                                portionDescription: item.portionDescription || '',
+                                                portionGrams: item.portionGrams || '',
+                                                protein: item.protein,
+                                                carbs: item.carbs,
+                                                fat: item.fat,
+                                                fiber: item.fiber || ''
+                                              });
+                                            }}
+                                            className="p-1 rounded-md text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition"
+                                            title={`Edit ${item.name}`}
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                     <span className="text-[10px] text-slate-400 block">
                                       {item.portionDescription} • P:{item.protein}g C:{item.carbs}g F:{item.fat}g
@@ -340,6 +555,183 @@ export const MealsTimeline: React.FC<MealsTimelineProps> = ({
           );
         })}
       </div>
+
+      {/* Edit Food Item / Ingredient Modal */}
+      {editingIngredient && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setEditingIngredient(null)}
+        >
+          <div 
+            className="bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    {editingIngredient.itemIndex >= (meals.find(m => m.id === editingIngredient.mealId)?.items.length || 0)
+                      ? 'Add Food Item'
+                      : 'Edit Food Item'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Correct food recognition and customize nutrition</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingIngredient(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Food Name */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Food Name
+                </label>
+                <input
+                  type="text"
+                  value={editingIngredient.name}
+                  onChange={(e) => setEditingIngredient({ ...editingIngredient, name: e.target.value })}
+                  placeholder="e.g. Multi Grain Paratha"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              {/* Portion Description */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Portion Description
+                </label>
+                <input
+                  type="text"
+                  value={editingIngredient.portionDescription}
+                  onChange={(e) => setEditingIngredient({ ...editingIngredient, portionDescription: e.target.value })}
+                  placeholder="e.g. 1.5 medium parathas (90g)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Calories and Grams */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Calories (kcal)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editingIngredient.calories}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+                      setEditingIngredient({ ...editingIngredient, calories: val === '' ? '' : Number(val) });
+                    }}
+                    placeholder="e.g. 260"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    Weight (grams)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editingIngredient.portionGrams}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+                      setEditingIngredient({ ...editingIngredient, portionGrams: val === '' ? '' : Number(val) });
+                    }}
+                    placeholder="e.g. 90"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Macronutrients Grid */}
+              <div className="grid grid-cols-4 gap-2 pt-1">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Protein (g)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingIngredient.protein}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, protein: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Carbs (g)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingIngredient.carbs}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, carbs: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Fat (g)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingIngredient.fat}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, fat: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Fiber (g)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingIngredient.fiber}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, fiber: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+              {editingIngredient.itemIndex < (meals.find(m => m.id === editingIngredient.mealId)?.items.length || 0) ? (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteIngredientFromMeal(editingIngredient.mealId, editingIngredient.itemIndex)}
+                  className="text-xs text-rose-500 hover:text-rose-600 font-semibold flex items-center gap-1 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Remove
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingIngredient(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-obsidian-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedIngredient}
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" /> Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
